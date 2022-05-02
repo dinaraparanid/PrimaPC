@@ -1,3 +1,9 @@
+extern crate jni;
+
+mod entities;
+mod traits;
+mod utils;
+
 use jni::{
     objects::JString,
     sys::{jclass, jstring},

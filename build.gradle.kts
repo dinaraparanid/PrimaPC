@@ -24,6 +24,7 @@ buildscript {
 
 dependencies {
     implementation(compose.desktop.currentOs)
+    implementation(group = "net.jthink", name = "jaudiotagger", version = "3.0.1")
 }
 
 tasks.withType<KotlinCompile> {

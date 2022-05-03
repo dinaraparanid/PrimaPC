@@ -1,8 +1,12 @@
 extern crate jni;
 
-mod entities;
+pub mod entities;
+pub mod program;
 mod traits;
 mod utils;
+
+#[cfg(test)]
+mod tests;
 
 use jni::{
     objects::JString,

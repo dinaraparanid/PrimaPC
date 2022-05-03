@@ -7,8 +7,10 @@ edition = "2021"
 jni = "0.19.0"
 chrono = "0.4"
 dirs2 = "3.0.1"
-futures = "0.3.21"
+futures = { version = "0.3.21", features = ["thread-pool"] }
 audiotags = "0.2.7182"
+rodio = "0.15.0"
+async-recursion = "1.0.0"
 
 [lib]
 crate-type = ["cdylib"]

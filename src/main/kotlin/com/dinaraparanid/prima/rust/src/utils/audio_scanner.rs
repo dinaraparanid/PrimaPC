@@ -1,110 +1,123 @@
-use crate::{entities::default_track::DefaultTrack, utils::params::PARAMS};
+extern crate async_recursion;
+extern crate audiotags;
+extern crate chrono;
+extern crate futures;
+
+use crate::{entities::default_track::DefaultTrack, program::ProgramInstance};
 
 use std::{
     fs,
     path::Path,
-    sync::{Arc, Mutex},
+    sync::Weak,
+    sync::{Arc, Mutex, RwLock},
     time::SystemTime,
 };
 
-use audiotags::{Album, Tag};
+use async_recursion::async_recursion;
+use audiotags::Tag;
 use chrono::{DateTime, Duration};
-
-#[derive(Default, Debug)]
-pub(crate) struct AudioScannerInstance {}
-
-impl AudioScannerInstance {
-    #[inline]
-    const fn new() -> Self {
-        AudioScannerInstance::default()
-    }
-}
+use futures::{executor::ThreadPool, task::SpawnExt};
 
 #[derive(Debug)]
-pub(crate) struct AudioScanner {
-    instance: Arc<Mutex<Option<AudioScannerInstance>>>,
-}
-
-impl Default for AudioScanner {
-    #[inline]
-    fn default() -> Self {
-        AudioScanner {
-            instance: Arc::new(Mutex::new(Some(AudioScannerInstance::new()))),
-        }
-    }
+pub struct AudioScanner {
+    pool: ThreadPool,
+    program: Weak<RwLock<Option<ProgramInstance>>>,
 }
 
 impl AudioScanner {
     #[inline]
-    fn new() -> Self {
-        AudioScanner::default()
+    pub fn new(program: Arc<RwLock<Option<ProgramInstance>>>) -> Self {
+        AudioScanner {
+            pool: ThreadPool::new().unwrap(),
+            program: Arc::downgrade(&program),
+        }
     }
 
     #[inline]
-    pub(crate) async fn get_instance(&self) -> Option<AudioScannerInstance> {
-        self.instance.lock().unwrap()?
-    }
+    pub async fn get_all_tracks(&self) -> Arc<Mutex<Vec<DefaultTrack>>> {
+        let tracks = Arc::new(Mutex::new(Vec::new()));
+        let pool = self.pool.clone();
 
-    pub(crate) async fn get_all_tracks(&self) -> Vec<DefaultTrack> {
-        let mut tracks = vec![];
-        self.search_all_tracks(
-            unsafe { PARAMS.get_instance() }
-                .await
+        AudioScanner::search_all_tracks(
+            self.program
+                .upgrade()
+                .unwrap()
+                .read()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .params
+                .read()
+                .unwrap()
+                .as_ref()
                 .unwrap()
                 .music_search_path
                 .as_path(),
-            &mut tracks,
-        );
-        tracks
+            tracks.clone(),
+            pool,
+        )
+        .await;
+        tracks.clone()
     }
 
     #[inline]
-    async fn scan_file(&self, file: &Path) -> Option<DefaultTrack> {
-        let tag = Tag::default().read_from_path(file)?;
+    async fn scan_file(file: &Path) -> Option<DefaultTrack> {
+        match Tag::default().read_from_path(file) {
+            Ok(tag) => Some(DefaultTrack::new(
+                tag.title().map(|title| title.to_string()),
+                tag.artist().map(|artist| artist.to_string()),
+                tag.album().map(|album| album.title.to_string()),
+                file.to_path_buf(),
+                Duration::milliseconds(0), // TODO: Find real Duration
+                DateTime::from(
+                    fs::metadata(file)
+                        .map(|md| md.created().unwrap_or(SystemTime::now()))
+                        .unwrap_or(SystemTime::now()),
+                ),
+                tag.track_number().map(|x| x as isize).unwrap_or(-1),
+            )),
 
-        Some(DefaultTrack::new(
-            tag.title().unwrap_or("No title").to_string(),
-            tag.artist().unwrap_or("Unknown artist").to_string(),
-            tag.album()
-                .unwrap_or(Album::with_title("Unknown album"))
-                .title
-                .to_string(),
-            file.into_path_buf(),
-            Duration::milliseconds(0),
-            DateTime::from(
-                fs::metadata(file)
-                    .map(|md| md.created().unwrap_or(SystemTime::now()))
-                    .unwrap_or(SystemTime::now()),
-            ),
-            tag.track_number().map(|x| x as isize).unwrap_or(-1),
-        ))
+            Err(_) => None,
+        }
     }
 
+    #[async_recursion]
     async fn search_all_tracks(
-        &self,
         dir: &Path,
-        tracks: &mut Vec<DefaultTrack>,
+        tracks: Arc<Mutex<Vec<DefaultTrack>>>,
+        pool: ThreadPool,
     ) -> std::io::Result<()> {
         let dir = fs::read_dir(dir)?;
         let mut tasks = Vec::with_capacity(1000);
 
         for entry in dir {
             let path = entry?.path();
+            let tracks_copy = tracks.clone();
+            let pool1 = pool.clone();
+            let pool2 = pool.clone();
 
-            tasks.push(async move {
-                if path.is_dir() {
-                    self.search_all_tracks(path.as_path(), tracks)
-                        .await
-                        .unwrap();
-                } else {
-                    self.scan_file(path.as_path()).await
-                }
-            });
+            tasks.push(
+                pool1
+                    .spawn_with_handle(async move {
+                        if path.is_dir() {
+                            AudioScanner::search_all_tracks(
+                                path.as_path(),
+                                tracks_copy.clone(),
+                                pool2.clone(),
+                            )
+                            .await
+                            .unwrap();
+                        } else {
+                            if let Some(track) = AudioScanner::scan_file(path.as_path()).await {
+                                tracks_copy.lock().unwrap().push(track)
+                            }
+                        }
+                    })
+                    .unwrap(),
+            );
         }
 
         futures::future::join_all(tasks).await;
         Ok(())
     }
 }
-
-pub(crate) static mut AUDIO_SCANNER: AudioScanner = AudioScanner::new();

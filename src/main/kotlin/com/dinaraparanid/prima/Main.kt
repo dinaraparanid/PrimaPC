@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.dinaraparanid.prima.rust.RustLibs
+import org.jaudiotagger.audio.AudioFileIO
 
 @Composable
 @Preview
@@ -34,6 +35,8 @@ fun App() {
 }
 
 fun main() {
+    AudioFileIO
+
     application {
         Window(onCloseRequest = ::exitApplication) {
             App()

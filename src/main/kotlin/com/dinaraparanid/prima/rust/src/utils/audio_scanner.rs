@@ -38,7 +38,7 @@ impl AudioScanner {
         let tracks = Arc::new(Mutex::new(Vec::new()));
         let pool = self.pool.clone();
 
-        AudioScanner::search_all_tracks(
+        self.search_all_tracks(
             self.program
                 .upgrade()
                 .unwrap()
@@ -61,7 +61,28 @@ impl AudioScanner {
     }
 
     #[inline]
-    async fn scan_file(file: &Path) -> Option<DefaultTrack> {
+    async fn scan_file(&self, file: &Path) -> Option<DefaultTrack> {
+        let jni_env = self
+            .program
+            .upgrade()
+            .unwrap()
+            .read()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .jni_env
+            .read()
+            .unwrap()
+            .as_ref()
+            .unwrap();
+
+        /*jni_env.call_static_method(
+            jni_env
+                .find_class(" org/jaudiotagger/audio/AudioFileIO")
+                .unwrap(),
+
+        )*/
+
         match Tag::default().read_from_path(file) {
             Ok(tag) => Some(DefaultTrack::new(
                 tag.title().map(|title| title.to_string()),
@@ -83,6 +104,7 @@ impl AudioScanner {
 
     #[async_recursion]
     async fn search_all_tracks(
+        &self,
         dir: &Path,
         tracks: Arc<Mutex<Vec<DefaultTrack>>>,
         pool: ThreadPool,
@@ -100,7 +122,7 @@ impl AudioScanner {
                 pool1
                     .spawn_with_handle(async move {
                         if path.is_dir() {
-                            AudioScanner::search_all_tracks(
+                            self.search_all_tracks(
                                 path.as_path(),
                                 tracks_copy.clone(),
                                 pool2.clone(),
@@ -108,7 +130,7 @@ impl AudioScanner {
                             .await
                             .unwrap();
                         } else {
-                            if let Some(track) = AudioScanner::scan_file(path.as_path()).await {
+                            if let Some(track) = self.scan_file(path.as_path()).await {
                                 tracks_copy.lock().unwrap().push(track)
                             }
                         }

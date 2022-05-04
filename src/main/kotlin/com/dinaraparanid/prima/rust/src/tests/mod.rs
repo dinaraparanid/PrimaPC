@@ -1,7 +1,5 @@
 extern crate futures;
 
-use crate::{entities::default_track::DefaultTrack, program::Program};
-
 use futures::{
     executor::ThreadPool,
     task::{Spawn, SpawnExt},
@@ -51,7 +49,7 @@ fn multithreading_async_test() {
     });
 }
 
-#[test]
+/*#[test]
 fn scan_tracks_test() {
     let program = Program::new();
 
@@ -75,4 +73,4 @@ fn scan_tracks_test() {
             Vec::<DefaultTrack>::new()
         )
     })
-}
+}*/

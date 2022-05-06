@@ -10,7 +10,7 @@ pub trait TrackTrait {
     fn get_path(&self) -> &PathBuf;
     fn get_duration(&self) -> &Duration;
     fn get_add_date(&self) -> &DateTime<Local>;
-    fn get_number_in_album(&self) -> isize;
+    fn get_number_in_album(&self) -> i16;
 }
 
 impl PartialEq for dyn TrackTrait {

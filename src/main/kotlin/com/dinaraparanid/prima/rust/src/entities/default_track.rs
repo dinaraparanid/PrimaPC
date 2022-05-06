@@ -12,7 +12,7 @@ pub struct DefaultTrack {
     path: PathBuf,
     duration: Duration,
     add_date: DateTime<Local>,
-    number_in_album: isize,
+    number_in_album: i16,
 }
 
 impl TrackTrait for DefaultTrack {
@@ -56,7 +56,7 @@ impl TrackTrait for DefaultTrack {
     }
 
     #[inline]
-    fn get_number_in_album(&self) -> isize {
+    fn get_number_in_album(&self) -> i16 {
         self.number_in_album
     }
 }
@@ -70,7 +70,7 @@ impl DefaultTrack {
         path: PathBuf,
         duration: Duration,
         add_date: DateTime<Local>,
-        number_in_album: isize,
+        number_in_album: i16,
     ) -> Self {
         DefaultTrack {
             title,

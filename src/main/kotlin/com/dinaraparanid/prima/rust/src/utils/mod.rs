@@ -1,2 +1,2 @@
-pub(crate) mod audio_scanner;
-pub(crate) mod params;
+pub mod audio_scanner;
+pub mod params;

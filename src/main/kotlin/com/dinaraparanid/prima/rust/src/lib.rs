@@ -4,12 +4,12 @@ extern crate jni;
 pub mod entities;
 pub mod jvm;
 mod traits;
-mod utils;
+pub(crate) mod utils;
 
 #[cfg(test)]
 mod tests;
 
-use crate::{jvm::JVM, traits::track_trait::TrackTrait, utils::audio_scanner::AUDIO_SCANNER};
+use crate::{jvm::JVM, traits::track_trait::TrackTrait, utils::audio_scanner::AudioScanner};
 use futures::executor::block_on;
 use std::sync::Arc;
 
@@ -28,7 +28,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_initRust(
     unsafe {
         let jvm = &mut JVM.write().unwrap();
         jvm.jni_env = Arc::new(Some(env));
-        jvm.rust_libs_class = Arc::new(Some(class));
+        jvm.rust_libs_class = Arc::new(Some(class.clone()));
     }
 }
 
@@ -51,7 +51,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracks(
     env: JNIEnv,
     _class: jclass,
 ) -> jobjectArray {
-    let rust_tracks = block_on(unsafe { &AUDIO_SCANNER }.read().unwrap().get_all_tracks()).clone();
+    let rust_tracks = block_on(AudioScanner::get_all_tracks());
     let rust_tracks = &*rust_tracks.lock().unwrap();
 
     let java_track_class = env
@@ -73,7 +73,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracks(
             let java_track = env
                 .new_object(
                     java_track_class,
-                    "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JS)V",
+                    "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JS)V",
                     &[
                         JValue::Object(JObject::from(
                             env.new_string(track.get_title().unwrap()).unwrap(),
@@ -84,13 +84,17 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracks(
                         JValue::Object(JObject::from(
                             env.new_string(track.get_album().unwrap()).unwrap(),
                         )),
+                        JValue::Object(JObject::from(
+                            env.new_string(track.get_path().to_string_lossy()).unwrap(),
+                        )),
                         JValue::Long(track.get_duration().num_seconds() as jlong),
                         JValue::Short(track.get_number_in_album() as jshort),
                     ],
                 )
                 .unwrap();
 
-            env.set_object_array_element(java_tracks, ind as jsize, java_track);
+            env.set_object_array_element(java_tracks, ind as jsize, java_track)
+                .unwrap();
         });
 
     java_tracks

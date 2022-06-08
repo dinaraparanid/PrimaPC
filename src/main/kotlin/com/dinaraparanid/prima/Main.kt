@@ -8,8 +8,6 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.application
 import com.dinaraparanid.prima.rust.RustLibs
 
 @Composable

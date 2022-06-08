@@ -1,6 +1,4 @@
 extern crate async_recursion;
-extern crate audiotags;
-extern crate chrono;
 extern crate futures;
 extern crate once_cell;
 
@@ -10,15 +8,20 @@ use std::{
     fs,
     path::Path,
     sync::{Arc, Mutex, RwLock},
-    time::SystemTime,
 };
 
-use crate::utils::params::PARAMS;
+use jni::{
+    objects::{JObject, JValue},
+    signature::JavaType,
+};
+
+use crate::utils::{
+    extensions::{jni_env_ext::JNIEnvExt, jobject_ext::JObjectExt},
+    params::PARAMS,
+};
+
 use async_recursion::async_recursion;
-use audiotags::Tag;
-use chrono::{DateTime, Duration};
 use futures::{executor::ThreadPool, task::SpawnExt};
-use jni::objects::{JClass, JObject, JValue};
 use once_cell::sync::Lazy;
 
 #[derive(Debug)]
@@ -26,7 +29,7 @@ pub struct AudioScanner {
     pool: ThreadPool,
 }
 
-pub static mut AUDIO_SCANNER: Lazy<Arc<RwLock<AudioScanner>>> =
+static mut AUDIO_SCANNER: Lazy<Arc<RwLock<AudioScanner>>> =
     Lazy::new(|| Arc::new(RwLock::new(AudioScanner::new())));
 
 impl AudioScanner {
@@ -38,11 +41,11 @@ impl AudioScanner {
     }
 
     #[inline]
-    pub async fn get_all_tracks(&'static self) -> Arc<Mutex<Vec<DefaultTrack>>> {
+    pub async fn get_all_tracks() -> Arc<Mutex<Vec<DefaultTrack>>> {
         let tracks = Arc::new(Mutex::new(Vec::new()));
-        let pool = self.pool.clone();
+        let pool = unsafe { AUDIO_SCANNER.read().unwrap().pool.clone() };
 
-        self.search_all_tracks(
+        AudioScanner::search_all_tracks(
             unsafe {
                 PARAMS
                     .read()
@@ -62,49 +65,35 @@ impl AudioScanner {
     }
 
     #[inline]
-    pub async fn scan_file(&self, file: &Path) -> Option<DefaultTrack> {
-        let jni_env = unsafe { &JVM.read().unwrap().jni_env.unwrap() };
-
-        let rust_libs_class =
-            JClass::from(unsafe { &JVM }.read().unwrap().rust_libs_class.unwrap());
+    pub async fn scan_file(file: &Path) -> Option<DefaultTrack> {
+        let jni_env = unsafe { &JVM.read().unwrap().jni_env }.clone();
+        let jvm = jni_env.unwrap().get_java_vm().unwrap();
+        let jni_env = jvm.attach_current_thread_permanently().unwrap();
 
         let file_name = jni_env
             .new_string(file.to_string_lossy().to_string())
             .unwrap();
 
-        let duration = jni_env
-            .call_static_method(
-                rust_libs_class,
-                "getTrackDuration",
-                "(Ljava/lang/String;)I",
-                &[JValue::Object(JObject::from(file_name))],
-            )
-            .unwrap()
-            .i()
-            .unwrap();
-
-        match Tag::default().read_from_path(file) {
-            Ok(tag) => Some(DefaultTrack::new(
-                tag.title().map(|title| title.to_string()),
-                tag.artist().map(|artist| artist.to_string()),
-                tag.album().map(|album| album.title.to_string()),
-                file.to_path_buf(),
-                Duration::milliseconds(duration as i64),
-                DateTime::from(
-                    fs::metadata(file)
-                        .map(|md| md.created().unwrap_or(SystemTime::now()))
-                        .unwrap_or(SystemTime::now()),
-                ),
-                tag.track_number().map(|x| x as i16).unwrap_or(-1),
-            )),
-
-            Err(_) => None,
-        }
+        JObjectExt::array_to_track(
+            &unsafe {
+                JNIEnvExt::call_static_method(
+                    &jni_env,
+                    "com/dinaraparanid/prima/rust/RustLibs",
+                    "getDataByPath",
+                    "(Ljava/lang/String;)[Ljava/lang/Object;",
+                    JavaType::Array(Box::new(JavaType::Object(String::from("java/lang/Object")))),
+                    &[JValue::Object(JObject::from(file_name))],
+                )
+            }
+            .l()
+            .unwrap(),
+            &jni_env,
+            file.to_path_buf(),
+        )
     }
 
     #[async_recursion]
     async fn search_all_tracks(
-        &'static self,
         dir: &Path,
         tracks: Arc<Mutex<Vec<DefaultTrack>>>,
         pool: ThreadPool,
@@ -122,7 +111,7 @@ impl AudioScanner {
                 pool1
                     .spawn_with_handle(async move {
                         if path.is_dir() {
-                            self.search_all_tracks(
+                            AudioScanner::search_all_tracks(
                                 path.as_path(),
                                 tracks_copy.clone(),
                                 pool2.clone(),
@@ -130,7 +119,7 @@ impl AudioScanner {
                             .await
                             .unwrap();
                         } else {
-                            if let Some(track) = self.scan_file(path.as_path()).await {
+                            if let Some(track) = AudioScanner::scan_file(path.as_path()).await {
                                 tracks_copy.lock().unwrap().push(track)
                             }
                         }

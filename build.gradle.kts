@@ -4,7 +4,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.6.10"
-    id("org.jetbrains.compose") version "1.1.0"
+    id("org.jetbrains.compose") version "1.1.1"
 }
 
 group = "com.paranid5"
@@ -25,6 +25,7 @@ buildscript {
 dependencies {
     implementation(compose.desktop.currentOs)
     implementation(group = "net.jthink", name = "jaudiotagger", version = "3.0.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.2")
 }
 
 tasks.withType<KotlinCompile> {

@@ -23,12 +23,11 @@ use jni::{
 #[allow(non_snake_case)]
 pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_initRust(
     env: JNIEnv<'static>,
-    class: jclass,
+    _class: jclass,
 ) {
     unsafe {
         let jvm = &mut JVM.write().unwrap();
         jvm.jni_env = Arc::new(Some(env));
-        jvm.rust_libs_class = Arc::new(Some(class.clone()));
     }
 }
 
@@ -40,6 +39,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_hello(
     name: JString,
 ) -> jstring {
     let name: String = env.get_string(name).unwrap().into();
+
     env.new_string(format!("Hello, {}!", name))
         .unwrap()
         .into_inner()
@@ -47,7 +47,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_hello(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracks(
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracksAsync(
     env: JNIEnv,
     _class: jclass,
 ) -> jobjectArray {
@@ -70,22 +70,75 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracks(
         .into_iter()
         .enumerate()
         .for_each(|(ind, track)| {
+            let mut path_buf = Vec::new();
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::ffi::OsStrExt;
+                path_buf.extend(track.get_path().as_os_str().as_bytes());
+                path_buf.push(0);
+            }
+
+            #[cfg(windows)]
+            {
+                use std::os::windows::ffi::OsStrExt;
+                buf.extend(
+                    track
+                        .get_path()
+                        .as_os_str()
+                        .encode_wide()
+                        .chain(Some(0))
+                        .map(|b| {
+                            let b = b.to_ne_bytes();
+                            b.get(0).map(|s| *s).into_iter().chain(b.get(1).map(|s| *s))
+                        })
+                        .flatten(),
+                );
+            }
+
             let java_track = env
                 .new_object(
                     java_track_class,
-                    "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JS)V",
+                    "([B[B[B[BJS)V",
                     &[
                         JValue::Object(JObject::from(
-                            env.new_string(track.get_title().unwrap()).unwrap(),
+                            env.byte_array_from_slice(
+                                &track
+                                    .get_title()
+                                    .unwrap()
+                                    .iter()
+                                    .map(|&jb| jb as u8)
+                                    .collect::<Vec<_>>()
+                                    .as_slice(),
+                            )
+                            .unwrap(),
                         )),
                         JValue::Object(JObject::from(
-                            env.new_string(track.get_artist().unwrap()).unwrap(),
+                            env.byte_array_from_slice(
+                                &track
+                                    .get_artist()
+                                    .unwrap()
+                                    .iter()
+                                    .map(|&jb| jb as u8)
+                                    .collect::<Vec<_>>()
+                                    .as_slice(),
+                            )
+                            .unwrap(),
                         )),
                         JValue::Object(JObject::from(
-                            env.new_string(track.get_album().unwrap()).unwrap(),
+                            env.byte_array_from_slice(
+                                &track
+                                    .get_album()
+                                    .unwrap()
+                                    .iter()
+                                    .map(|&jb| jb as u8)
+                                    .collect::<Vec<_>>()
+                                    .as_slice(),
+                            )
+                            .unwrap(),
                         )),
                         JValue::Object(JObject::from(
-                            env.new_string(track.get_path().to_string_lossy()).unwrap(),
+                            env.byte_array_from_slice(path_buf.as_slice()).unwrap(),
                         )),
                         JValue::Long(track.get_duration().num_seconds() as jlong),
                         JValue::Short(track.get_number_in_album() as jshort),

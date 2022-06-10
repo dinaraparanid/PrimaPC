@@ -1,12 +1,14 @@
 extern crate chrono;
+extern crate jni;
 
 use chrono::{DateTime, Duration, Local};
+use jni::sys::jbyte;
 use std::path::PathBuf;
 
 pub trait TrackTrait {
-    fn get_title(&self) -> Option<&str>;
-    fn get_artist(&self) -> Option<&str>;
-    fn get_album(&self) -> Option<&str>;
+    fn get_title(&self) -> Option<&Vec<jbyte>>;
+    fn get_artist(&self) -> Option<&Vec<jbyte>>;
+    fn get_album(&self) -> Option<&Vec<jbyte>>;
     fn get_path(&self) -> &PathBuf;
     fn get_duration(&self) -> &Duration;
     fn get_add_date(&self) -> &DateTime<Local>;

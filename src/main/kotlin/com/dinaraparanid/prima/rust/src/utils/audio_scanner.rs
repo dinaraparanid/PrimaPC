@@ -2,7 +2,15 @@ extern crate async_recursion;
 extern crate futures;
 extern crate once_cell;
 
-use crate::{entities::default_track::DefaultTrack, JVM};
+use crate::{
+    entities::default_track::DefaultTrack,
+    utils::{
+        extensions::{jni_env_ext::JNIEnvExt, jobject_ext::JObjectExt, string_ext::StringExt},
+        params::PARAMS,
+        track_order::{Comparator, Ord},
+    },
+    TrackTrait, JVM,
+};
 
 use std::{
     fs,
@@ -13,11 +21,6 @@ use std::{
 use jni::{
     objects::{JObject, JValue},
     signature::JavaType,
-};
-
-use crate::utils::{
-    extensions::{jni_env_ext::JNIEnvExt, jobject_ext::JObjectExt},
-    params::PARAMS,
 };
 
 use async_recursion::async_recursion;
@@ -61,6 +64,48 @@ impl AudioScanner {
         .await
         .unwrap();
 
+        {
+            let mut tracks = tracks.lock().unwrap();
+            let track_order = unsafe { PARAMS.read().unwrap().as_ref().unwrap().track_order };
+
+            tracks.sort_by(|f, s| match track_order.comparator {
+                Comparator::TITLE => match track_order.order {
+                    Ord::ASC => String::from_jbyte_vec(f.get_title().unwrap().clone())
+                        .partial_cmp(&String::from_jbyte_vec(s.get_title().unwrap().clone()))
+                        .unwrap(),
+
+                    Ord::DESC => String::from_jbyte_vec(s.get_title().unwrap().clone())
+                        .partial_cmp(&String::from_jbyte_vec(f.get_title().unwrap().clone()))
+                        .unwrap(),
+                },
+
+                Comparator::ARTIST => match track_order.order {
+                    Ord::ASC => String::from_jbyte_vec(f.get_artist().unwrap().clone())
+                        .partial_cmp(&String::from_jbyte_vec(s.get_artist().unwrap().clone()))
+                        .unwrap(),
+
+                    Ord::DESC => String::from_jbyte_vec(s.get_artist().unwrap().clone())
+                        .partial_cmp(&String::from_jbyte_vec(f.get_artist().unwrap().clone()))
+                        .unwrap(),
+                },
+
+                Comparator::ALBUM => match track_order.order {
+                    Ord::ASC => String::from_jbyte_vec(f.get_album().unwrap().clone())
+                        .partial_cmp(&String::from_jbyte_vec(s.get_album().unwrap().clone()))
+                        .unwrap(),
+
+                    Ord::DESC => String::from_jbyte_vec(s.get_album().unwrap().clone())
+                        .partial_cmp(&String::from_jbyte_vec(f.get_album().unwrap().clone()))
+                        .unwrap(),
+                },
+
+                Comparator::DATE => match track_order.order {
+                    Ord::ASC => f.get_add_date().partial_cmp(s.get_add_date()).unwrap(),
+                    Ord::DESC => s.get_add_date().partial_cmp(f.get_add_date()).unwrap(),
+                },
+            })
+        }
+
         tracks.clone()
     }
 
@@ -98,6 +143,8 @@ impl AudioScanner {
         tracks: Arc<Mutex<Vec<DefaultTrack>>>,
         pool: ThreadPool,
     ) -> std::io::Result<()> {
+        println!("{}", dir.to_string_lossy());
+
         let dir = fs::read_dir(dir)?;
         let mut tasks = Vec::with_capacity(1000);
 

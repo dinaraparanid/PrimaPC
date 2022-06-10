@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 
 public enum RustLibs {;
     private static final String LIBRARY_PATH = "/home/paranid5/PROGRAMMING/kotlin/PrimaPC/src/main/kotlin/com/dinaraparanid/prima/rust/target/release/libprima_pc.so";
@@ -19,7 +20,7 @@ public enum RustLibs {;
 
     public static final native @NotNull String hello(@NotNull final String name);
 
-    public static final native @NotNull Track[] getAllTracks();
+    public static final native @NotNull Track[] getAllTracksAsync();
 
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;
@@ -44,9 +45,9 @@ public enum RustLibs {;
             }
 
             return new Object[]{
-                    tag.getFirst(FieldKey.TITLE),
-                    tag.getFirst(FieldKey.ARTIST),
-                    tag.getFirst(FieldKey.ALBUM),
+                    tag.getFirst(FieldKey.TITLE).getBytes(StandardCharsets.UTF_16),
+                    tag.getFirst(FieldKey.ARTIST).getBytes(StandardCharsets.UTF_16),
+                    tag.getFirst(FieldKey.ALBUM).getBytes(StandardCharsets.UTF_16),
                     file.getAudioHeader().getTrackLength(),
                     numberInAlbum
             };

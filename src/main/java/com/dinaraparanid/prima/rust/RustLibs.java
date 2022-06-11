@@ -22,6 +22,8 @@ public enum RustLibs {;
 
     public static final native @NotNull Track[] getAllTracksAsync();
 
+    public static final native @Nullable Track getCurTrack();
+
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;
     }

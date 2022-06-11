@@ -1,10 +1,9 @@
-package com.dinaraparanid.prima.rust.src.ui.tracks
+package com.dinaraparanid.prima.ui.tracks
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
@@ -30,14 +29,18 @@ fun Tracks() {
         tracks.addAll(tracksTask.await())
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(15.dp)
-    ) {
-        items(tracks) {
-            println(it.title)
-            TrackItem(it)
+    val listState = rememberLazyListState()
+
+    Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
+        TracksBar(tracks, listState)
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+            contentPadding = PaddingValues(20.dp),
+            verticalArrangement = Arrangement.spacedBy(15.dp),
+            state = listState
+        ) {
+            items(tracks, key = { it }) { TrackItem(it) }
         }
     }
 }

@@ -3,7 +3,7 @@ extern crate futures;
 extern crate once_cell;
 
 use crate::{
-    entities::default_track::DefaultTrack,
+    entities::tracks::default_track::DefaultTrack,
     utils::{
         extensions::{jni_env_ext::JNIEnvExt, jobject_ext::JObjectExt, string_ext::StringExt},
         params::PARAMS,

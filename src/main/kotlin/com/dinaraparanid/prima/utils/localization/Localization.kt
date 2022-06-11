@@ -3,31 +3,52 @@ package com.dinaraparanid.prima.utils.localization
 import com.dinaraparanid.prima.utils.Params
 
 object Localization {
-    val unknownTrack = when (Params.language) {
-        Params.Language.EN -> English("Unknown Track")
-        Params.Language.RU -> Russian("Неизвестный Трек")
-        Params.Language.BE -> Belarusian("Невядомы Трэк")
-        Params.Language.ZH -> Chinese("未知轨道")
+
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun resource(en: String, ru: String, be: String, zh: String) = when (Params.language) {
+        Params.Language.EN -> English(en)
+        Params.Language.RU -> Russian(ru)
+        Params.Language.BE -> Belarusian(be)
+        Params.Language.ZH -> Chinese(zh)
     }
 
-    val unknownArtist = when (Params.language) {
-        Params.Language.EN -> English("Unknown Artist")
-        Params.Language.RU -> Russian("Неизвестный Артист")
-        Params.Language.BE -> Belarusian("Невядомы Артыст")
-        Params.Language.ZH -> Chinese("未知艺术家")
-    }
+    @JvmField
+    val unknownTrack = resource(
+        en = "Unknown Track",
+        ru = "Неизвестный Трек",
+        be = "Невядомы Трэк",
+        zh = "未知轨道"
+    )
 
-    val unknownAlbum = when (Params.language) {
-        Params.Language.EN -> English("Unknown Album")
-        Params.Language.RU -> Russian("Неизвестный Альбом")
-        Params.Language.BE -> Belarusian("Невядомы Альбом")
-        Params.Language.ZH -> Chinese("未知专辑")
-    }
+    @JvmField
+    val unknownArtist = resource(
+        en = "Unknown Artist",
+        ru = "Неизвестный Артист",
+        be = "Невядомы Артыст",
+        zh = "未知艺术家"
+    )
 
-    val trackCover = when (Params.language) {
-        Params.Language.EN -> English("Track's cover")
-        Params.Language.RU -> Russian("Обложка трека")
-        Params.Language.BE -> Belarusian("Вокладка трэка")
-        Params.Language.ZH -> Chinese("轨道盖")
-    }
+    @JvmField
+    val unknownAlbum = resource(
+        en = "Unknown Album",
+        ru = "Неизвестный Альбом",
+        be = "Невядомы Альбом",
+        zh = "未知专辑"
+    )
+
+    @JvmField
+    val trackCover = resource(
+        en = "Track's cover",
+        ru = "Обложка трека",
+        be = "Вокладка трэка",
+        zh = "轨道盖"
+    )
+
+    @JvmField
+    val tracks = resource(
+        en = "Tracks",
+        ru = "Треки",
+        be = "Трэкі",
+        zh = "音乐曲目"
+    )
 }

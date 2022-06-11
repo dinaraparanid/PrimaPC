@@ -1,21 +1,21 @@
-package com.dinaraparanid.prima.rust.src.ui
+package com.dinaraparanid.prima.ui
 
 import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.Colors
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import com.dinaraparanid.prima.rust.src.ui.tracks.Tracks
+import com.dinaraparanid.prima.ui.tracks.Tracks
 import com.dinaraparanid.prima.utils.Params
 
 @Composable
 @Preview
-fun Prima() {
-    val theme = Params.theme
+fun MainScreen() {
     val primary = Params.primaryColor
     val secondary = Params.secondaryColor
 
@@ -33,9 +33,18 @@ fun Prima() {
             onBackground = secondary,
             onSurface = secondary,
             onError = Color.Red,
-            isLight = !theme.isNight
+            isLight = !Params.theme.isNight
         )
     ) {
-        Surface(color = secondary, modifier = Modifier.fillMaxSize()) { Tracks() }
+        Surface(color = secondary, modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Scaffold(
+                    topBar = { AppBar() },
+                    bottomBar = { PlayingBar() }
+                ) {
+                    Tracks()
+                }
+            }
+        }
     }
 }

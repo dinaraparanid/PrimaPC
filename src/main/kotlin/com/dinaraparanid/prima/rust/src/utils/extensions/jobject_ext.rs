@@ -1,7 +1,10 @@
 extern crate chrono;
 extern crate jni;
 
-use crate::{entities::default_track::DefaultTrack, utils::extensions::jni_env_ext::JNIEnvExt};
+use crate::{
+    entities::tracks::default_track::DefaultTrack, utils::extensions::jni_env_ext::JNIEnvExt,
+};
+
 use chrono::{DateTime, Duration};
 use std::path::PathBuf;
 use std::slice::from_raw_parts;

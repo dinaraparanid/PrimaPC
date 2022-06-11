@@ -1,8 +1,10 @@
-package com.dinaraparanid.prima.rust.src.ui.tracks
+package com.dinaraparanid.prima.ui.tracks
 
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
@@ -14,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.ContentScale
@@ -32,10 +33,11 @@ import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
 import java.io.File
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TrackItem(track: Track) {
+fun LazyItemScope.TrackItem(track: Track) {
     val coroutineScope = rememberCoroutineScope()
-    val isLoaded = remember { mutableStateOf(false) }
+    val isCoverLoaded = remember { mutableStateOf(false) }
     val cover = remember { mutableStateOf(ImageBitmap(0, 0)) }
 
     val coverTask = coroutineScope.async(Dispatchers.IO) {
@@ -48,11 +50,17 @@ fun TrackItem(track: Track) {
                 org.jetbrains.skia.Image.makeFromEncoded(it.toByteArray()).toComposeImageBitmap()
             }
 
-            isLoaded.value = true
+            isCoverLoaded.value = true
         }
     }
 
-    Card(backgroundColor = Params.primaryColor, modifier = Modifier.fillMaxWidth(), elevation = 15.dp) {
+    Card(
+        backgroundColor = Params.primaryColor,
+        elevation = 15.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateItemPlacement(animationSpec = tween(durationMillis = 300)),
+    ) {
         Button(
             onClick = {
                 // TODO: Play track
@@ -61,17 +69,24 @@ fun TrackItem(track: Track) {
             colors = ButtonDefaults.buttonColors(backgroundColor = Params.secondaryColor),
         ) {
             Row(modifier = Modifier.fillMaxWidth()) {
-                if (isLoaded.value)
-                    Image(
-                        bitmap = cover.value,
-                        contentDescription = Localization.trackCover.resource,
-                        modifier = Modifier.height(50.dp).width(50.dp).clip(RoundedCornerShape(6.dp)),
-                        filterQuality = FilterQuality.High
-                    )
+                if (isCoverLoaded.value) Image(
+                    bitmap = cover.value,
+                    contentDescription = Localization.trackCover.resource,
+                    filterQuality = FilterQuality.High,
+                    modifier = Modifier
+                        .height(50.dp)
+                        .width(50.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .align(Alignment.CenterVertically),
+                )
                 else Image(
                     painter = painterResource("images/default_cover.png"),
                     contentDescription = Localization.trackCover.resource,
-                    modifier = Modifier.height(50.dp).width(50.dp).clip(RoundedCornerShape(8.dp)),
+                    modifier = Modifier
+                        .height(50.dp)
+                        .width(50.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .align(Alignment.CenterVertically),
                 )
 
                 Spacer(Modifier.width(20.dp).fillMaxHeight())
@@ -80,7 +95,7 @@ fun TrackItem(track: Track) {
                     Text(
                         text = track.title?.takeIf(String::isNotEmpty) ?: Localization.unknownTrack.resource,
                         fontSize = 18.sp,
-                        color = Params.fontColor
+                        color = Params.secondaryAlternativeColor
                     )
 
                     Text(
@@ -90,7 +105,7 @@ fun TrackItem(track: Track) {
                             track.album?.takeIf(String::isNotEmpty) ?: Localization.unknownAlbum.resource
                         }",
                         fontSize = 14.sp,
-                        color = Params.fontColor
+                        color = Params.secondaryAlternativeColor
                     )
                 }
 

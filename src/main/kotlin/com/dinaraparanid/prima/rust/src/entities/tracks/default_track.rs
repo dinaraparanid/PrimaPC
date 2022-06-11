@@ -1,12 +1,12 @@
 extern crate chrono;
 extern crate jni;
 
-use crate::traits::track_trait::TrackTrait;
+use crate::entities::tracks::track_trait::TrackTrait;
 use chrono::{DateTime, Duration, Local};
 use jni::sys::jbyte;
 use std::path::PathBuf;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct DefaultTrack {
     title: Option<Vec<jbyte>>,
     artist: Option<Vec<jbyte>>,
@@ -63,6 +63,13 @@ impl TrackTrait for DefaultTrack {
     }
 }
 
+impl PartialEq for DefaultTrack {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.path.eq(other.get_path())
+    }
+}
+
 impl DefaultTrack {
     #[inline]
     pub fn new(
@@ -74,7 +81,7 @@ impl DefaultTrack {
         add_date: DateTime<Local>,
         number_in_album: i16,
     ) -> Self {
-        DefaultTrack {
+        Self {
             title,
             artist,
             album,

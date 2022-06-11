@@ -3,9 +3,9 @@ extern crate jni;
 
 use chrono::{DateTime, Duration, Local};
 use jni::sys::jbyte;
-use std::path::PathBuf;
+use std::{fmt::Debug, path::PathBuf};
 
-pub trait TrackTrait {
+pub trait TrackTrait: PartialEq + Debug + Clone {
     fn get_title(&self) -> Option<&Vec<jbyte>>;
     fn get_artist(&self) -> Option<&Vec<jbyte>>;
     fn get_album(&self) -> Option<&Vec<jbyte>>;
@@ -13,11 +13,4 @@ pub trait TrackTrait {
     fn get_duration(&self) -> &Duration;
     fn get_add_date(&self) -> &DateTime<Local>;
     fn get_number_in_album(&self) -> i16;
-}
-
-impl PartialEq for dyn TrackTrait {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        self.get_path() == other.get_path()
-    }
 }

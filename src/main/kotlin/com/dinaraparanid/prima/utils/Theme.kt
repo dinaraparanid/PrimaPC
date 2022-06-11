@@ -6,7 +6,7 @@ sealed class Theme(
     private val r: Int,
     private val g: Int,
     private val b: Int,
-    val isNight: Boolean
+    @JvmField val isNight: Boolean
 ) {
     /** Gets rgb of theme */
     val rgb get() = ComposeColor(r, g, b)

@@ -19,7 +19,7 @@ use crate::{
 
 use jni::{
     objects::{JObject, JString},
-    sys::{jclass, jobject, jobjectArray, jsize, jstring},
+    sys::{jclass, jint, jintArray, jobject, jobjectArray, jsize, jstring},
     JNIEnv,
 };
 
@@ -99,4 +99,39 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrack(
         None => std::ptr::null_mut(),
         Some(track) => track.to_java_track(&env).into_inner(),
     }
+}
+
+/// Calculates time in hh:mm:ss format
+///
+/// # Safety
+/// Extern JNI junction
+///
+/// # Arguments
+/// *millis* - millisecond to convert
+///
+/// # Return
+/// jintArray[hh, mm, ss]
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_calcTrackTime(
+    env: JNIEnv,
+    _class: jclass,
+    mut millis: jint,
+) -> jintArray {
+    let time = env.new_int_array(3).unwrap_unchecked();
+
+    let h = millis / 3600;
+    millis -= h * 3600;
+
+    let m = millis / 60;
+    millis -= m * 60;
+
+    let s = millis;
+
+    let arr = [h, m, s];
+
+    env.set_int_array_region(time, 0, arr.as_slice())
+        .unwrap_unchecked();
+    time
 }

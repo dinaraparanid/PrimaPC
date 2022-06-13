@@ -10,10 +10,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,12 +30,16 @@ import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
 import java.io.File
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun LazyItemScope.TrackItem(track: Track) {
+@OptIn(ExperimentalFoundationApi::class)
+fun LazyItemScope.TrackItem(
+    track: Track,
+    currentTrackState: MutableState<Track?>,
+    isPlayingCoverLoadedState: MutableState<Boolean>
+) {
     val coroutineScope = rememberCoroutineScope()
-    val isCoverLoaded = remember { mutableStateOf(false) }
-    val cover = remember { mutableStateOf(ImageBitmap(0, 0)) }
+    val isCoverLoadedState = remember { mutableStateOf(false) }
+    val coverState = remember { mutableStateOf(ImageBitmap(0, 0)) }
 
     val coverTask = coroutineScope.async(Dispatchers.IO) {
         AudioFileIO.read(File(track.path.correctUTF8)).tagOrCreateAndSetDefault?.firstArtwork?.binaryData
@@ -46,11 +47,11 @@ fun LazyItemScope.TrackItem(track: Track) {
 
     coroutineScope.launch {
         coverTask.await()?.toList()?.let {
-            cover.value = withContext(Dispatchers.IO) {
+            coverState.value = withContext(Dispatchers.IO) {
                 org.jetbrains.skia.Image.makeFromEncoded(it.toByteArray()).toComposeImageBitmap()
             }
 
-            isCoverLoaded.value = true
+            isCoverLoadedState.value = true
         }
     }
 
@@ -63,14 +64,17 @@ fun LazyItemScope.TrackItem(track: Track) {
     ) {
         Button(
             onClick = {
+                currentTrackState.value = track
+                isPlayingCoverLoadedState.value = false
+
                 // TODO: Play track
             },
             modifier = Modifier.fillMaxSize().padding(3.dp),
             colors = ButtonDefaults.buttonColors(backgroundColor = Params.secondaryColor),
         ) {
             Row(modifier = Modifier.fillMaxWidth()) {
-                if (isCoverLoaded.value) Image(
-                    bitmap = cover.value,
+                if (isCoverLoadedState.value) Image(
+                    bitmap = coverState.value,
                     contentDescription = Localization.trackCover.resource,
                     filterQuality = FilterQuality.High,
                     modifier = Modifier

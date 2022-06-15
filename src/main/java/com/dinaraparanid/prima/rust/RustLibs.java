@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 public enum RustLibs {;
     private static final String LIBRARY_PATH = "/home/paranid5/PROGRAMMING/kotlin/PrimaPC/src/main/kotlin/com/dinaraparanid/prima/rust/target/release/libprima_pc.so";
@@ -18,11 +19,14 @@ public enum RustLibs {;
 
     public static final native void initRust();
 
-    public static final native @NotNull String hello(@NotNull final String name);
+    @NotNull
+    public static final native String hello(@NotNull final String name);
 
-    public static final native @NotNull Track[] getAllTracksAsync();
+    @NotNull
+    public static final native Track[] getAllTracksAsync();
 
-    public static final native @Nullable Track getCurTrack();
+    @Nullable
+    public static final native Track getCurTrack();
 
     /**
      * Calculates time in hh:mm:ss format
@@ -32,6 +36,12 @@ public enum RustLibs {;
 
     @NotNull
     public static final native int[] calcTrackTime(final int millis);
+
+    public static final native void onTrackClicked(@NotNull final List<Track> tracks, final int trackIndex);
+
+    public static final native void onNextTrackClicked();
+
+    public static final native void onPreviousTrackClicked();
 
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;

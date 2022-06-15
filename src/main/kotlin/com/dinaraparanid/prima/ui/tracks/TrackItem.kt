@@ -20,6 +20,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dinaraparanid.prima.entities.Track
+import com.dinaraparanid.prima.rust.RustLibs
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.extensions.correctUTF8
 import com.dinaraparanid.prima.utils.localization.Localization
@@ -33,10 +34,14 @@ import java.io.File
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 fun LazyItemScope.TrackItem(
-    track: Track,
+    tracks: List<Track>,
+    index: Int,
     currentTrackState: MutableState<Track?>,
-    isPlayingCoverLoadedState: MutableState<Boolean>
+    isPlayingCoverLoadedState: MutableState<Boolean>,
+    playbackPositionState: MutableState<Float>,
+    isPlayingState: MutableState<Boolean>
 ) {
+    val track = tracks[index]
     val coroutineScope = rememberCoroutineScope()
     val isCoverLoadedState = remember { mutableStateOf(false) }
     val coverState = remember { mutableStateOf(ImageBitmap(0, 0)) }
@@ -65,9 +70,10 @@ fun LazyItemScope.TrackItem(
         Button(
             onClick = {
                 currentTrackState.value = track
+                isPlayingState.value = true
                 isPlayingCoverLoadedState.value = false
-
-                // TODO: Play track
+                playbackPositionState.value = 0F
+                RustLibs.onTrackClicked(tracks, index)
             },
             modifier = Modifier.fillMaxSize().padding(3.dp),
             colors = ButtonDefaults.buttonColors(backgroundColor = Params.secondaryColor),

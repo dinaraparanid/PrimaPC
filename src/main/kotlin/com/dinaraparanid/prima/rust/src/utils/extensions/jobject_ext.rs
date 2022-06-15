@@ -6,8 +6,7 @@ use crate::{
 };
 
 use chrono::{DateTime, Duration};
-use std::path::PathBuf;
-use std::slice::from_raw_parts;
+use std::{path::PathBuf, slice::from_raw_parts};
 
 use jni::{
     objects::{JObject, JValue, ReleaseMode},

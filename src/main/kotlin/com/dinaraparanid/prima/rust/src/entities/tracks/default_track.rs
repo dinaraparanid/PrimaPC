@@ -1,9 +1,9 @@
 extern crate chrono;
 extern crate jni;
 
-use crate::entities::tracks::track_trait::TrackTrait;
+use crate::{entities::tracks::track_trait::TrackTrait, utils::wrappers::jtrack::JTrack};
 use chrono::{DateTime, Duration, Local};
-use jni::sys::jbyte;
+use jni::sys::{jbyte, jshort};
 use std::path::PathBuf;
 
 #[derive(Clone, Debug)]
@@ -14,7 +14,7 @@ pub struct DefaultTrack {
     path: PathBuf,
     duration: Duration,
     add_date: DateTime<Local>,
-    number_in_album: i16,
+    number_in_album: jshort,
 }
 
 impl TrackTrait for DefaultTrack {
@@ -70,6 +70,13 @@ impl PartialEq for DefaultTrack {
     }
 }
 
+impl From<JTrack> for DefaultTrack {
+    #[inline]
+    fn from(jtrack: JTrack) -> Self {
+        jtrack.to_default_track()
+    }
+}
+
 impl DefaultTrack {
     #[inline]
     pub fn new(
@@ -79,7 +86,7 @@ impl DefaultTrack {
         path: PathBuf,
         duration: Duration,
         add_date: DateTime<Local>,
-        number_in_album: i16,
+        number_in_album: jshort,
     ) -> Self {
         Self {
             title,
@@ -90,5 +97,18 @@ impl DefaultTrack {
             add_date,
             number_in_album,
         }
+    }
+
+    #[inline]
+    pub fn to_jtrack(self) -> JTrack {
+        JTrack::new(
+            self.title,
+            self.artist,
+            self.album,
+            self.path,
+            self.duration,
+            self.add_date,
+            self.number_in_album,
+        )
     }
 }

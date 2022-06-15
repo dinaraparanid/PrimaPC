@@ -39,16 +39,32 @@ fun MainScreen() {
             isLight = !Params.theme.isNight
         )
     ) {
+        val isPlayingState = remember { mutableStateOf(false) }
         val currentTrackState = remember { mutableStateOf(RustLibs.getCurTrack()) }
         val isPlayingCoverLoadedState = remember { mutableStateOf(false) }
+        val playbackPositionState = remember { mutableStateOf(0F) } // TODO: load position
 
         Surface(color = secondary, modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
                     topBar = { AppBar() },
-                    bottomBar = { PlayingBar(currentTrackState, isPlayingCoverLoadedState) }
+                    bottomBar = {
+                        PlayingBar(
+                            currentTrackState,
+                            isPlayingCoverLoadedState,
+                            playbackPositionState,
+                            isPlayingState
+                        )
+                    }
                 ) {
-                    Tracks(currentTrackState, isPlayingCoverLoadedState)
+                    // TODO: Load first screen
+
+                    Tracks(
+                        currentTrackState,
+                        isPlayingCoverLoadedState,
+                        playbackPositionState,
+                        isPlayingState
+                    )
                 }
             }
         }

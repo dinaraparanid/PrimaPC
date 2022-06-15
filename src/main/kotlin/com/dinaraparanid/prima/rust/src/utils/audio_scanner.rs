@@ -143,25 +143,23 @@ impl AudioScanner {
         tracks: Arc<Mutex<Vec<DefaultTrack>>>,
         pool: ThreadPool,
     ) -> std::io::Result<()> {
-        println!("{}", dir.to_string_lossy());
-
         let dir = fs::read_dir(dir)?;
         let mut tasks = Vec::with_capacity(1000);
 
         for entry in dir {
             let path = entry?.path();
             let tracks_copy = tracks.clone();
-            let pool1 = pool.clone();
-            let pool2 = pool.clone();
+            let pool_ref_1 = pool.clone();
+            let pool_ref_2 = pool.clone();
 
             tasks.push(
-                pool1
+                pool_ref_1
                     .spawn_with_handle(async move {
                         if path.is_dir() {
                             AudioScanner::search_all_tracks(
                                 path.as_path(),
                                 tracks_copy.clone(),
-                                pool2.clone(),
+                                pool_ref_2.clone(),
                             )
                             .await
                             .unwrap();

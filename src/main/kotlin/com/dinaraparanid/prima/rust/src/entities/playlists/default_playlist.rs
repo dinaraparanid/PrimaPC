@@ -55,12 +55,13 @@ impl<T: TrackTrait> DefaultPlaylist<T> {
         title: Option<String>,
         tp: PlaylistType,
         tracks: I,
+        cur_ind: usize,
     ) -> DefaultPlaylist<T> {
         Self {
             title,
             tp,
             tracks: Vec::from_iter(tracks),
-            cur_ind: 0,
+            cur_ind,
         }
     }
 

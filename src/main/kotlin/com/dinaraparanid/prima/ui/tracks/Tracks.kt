@@ -2,7 +2,7 @@ package com.dinaraparanid.prima.ui.tracks
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -14,7 +14,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 @Composable
-fun Tracks(currentTrackState: MutableState<Track?>, isPlayingCoverLoadedState: MutableState<Boolean>) {
+fun Tracks(
+    currentTrackState: MutableState<Track?>,
+    isPlayingCoverLoadedState: MutableState<Boolean>,
+    playbackPositionState: MutableState<Float>,
+    isPlayingState: MutableState<Boolean>
+) {
     val coroutineScope = rememberCoroutineScope()
     val tracks = remember { mutableStateListOf<Track>() }
     val tracksTask = coroutineScope.async(Dispatchers.IO) {
@@ -37,11 +42,14 @@ fun Tracks(currentTrackState: MutableState<Track?>, isPlayingCoverLoadedState: M
             verticalArrangement = Arrangement.spacedBy(15.dp),
             state = listState
         ) {
-            items(tracks, key = { it }) {
+            itemsIndexed(tracks, key = { _, track -> track }) { ind, _ ->
                 TrackItem(
-                    it,
+                    tracks,
+                    ind,
                     currentTrackState,
-                    isPlayingCoverLoadedState
+                    isPlayingCoverLoadedState,
+                    playbackPositionState,
+                    isPlayingState
                 )
             }
         }

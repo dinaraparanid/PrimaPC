@@ -17,8 +17,12 @@ use crate::{
     utils::{audio_scanner::AudioScanner, extensions::track_ext::TrackExt, params::PARAMS},
 };
 
+use crate::entities::playlists::default_playlist::DefaultPlaylist;
+use crate::entities::playlists::playlist_type::PlaylistType;
+use crate::entities::tracks::default_track::DefaultTrack;
+use crate::utils::wrappers::jtrack::JTrack;
 use jni::{
-    objects::{JObject, JString},
+    objects::{JList, JObject, JString},
     sys::{jclass, jint, jintArray, jobject, jobjectArray, jsize, jstring},
     JNIEnv,
 };
@@ -134,4 +138,54 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_calcTra
     env.set_int_array_region(time, 0, arr.as_slice())
         .unwrap_unchecked();
     time
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrackClicked(
+    env: JNIEnv,
+    _class: jclass,
+    tracks: JObject,
+    track_index: jint,
+) {
+    PARAMS.write().unwrap().as_mut().unwrap().cur_playlist = DefaultPlaylist::new(
+        None,
+        PlaylistType::default(),
+        JList::from_env(&env, tracks)
+            .unwrap()
+            .iter()
+            .unwrap()
+            .map(|jtrack| DefaultTrack::from(JTrack::from_env(&env, jtrack))),
+        track_index as usize,
+    )
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onNextTrackClicked(
+    _env: JNIEnv,
+    _class: jclass,
+) {
+    PARAMS
+        .write()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .cur_playlist
+        .skip_to_next()
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPreviousTrackClicked(
+    _env: JNIEnv,
+    _class: jclass,
+) {
+    PARAMS
+        .write()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .cur_playlist
+        .skip_to_prev()
 }

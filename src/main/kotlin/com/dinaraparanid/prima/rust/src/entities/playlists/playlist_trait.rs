@@ -169,6 +169,7 @@ impl<T: TrackTrait> Clone for DefaultPlaylist<T> {
             self.get_title().map(|title| title.clone()),
             self.get_type(),
             self.get_tracks().clone(),
+            0,
         )
     }
 }
@@ -188,14 +189,14 @@ impl<T: TrackTrait> Debug for DefaultPlaylist<T> {
 impl<Tr: TrackTrait> FromIterator<Tr> for DefaultPlaylist<Tr> {
     #[inline]
     fn from_iter<T: IntoIterator<Item = Tr>>(iter: T) -> Self {
-        DefaultPlaylist::new(None, PlaylistType::ALBUM, Vec::from_iter(iter))
+        DefaultPlaylist::new(None, PlaylistType::default(), Vec::from_iter(iter), 0)
     }
 }
 
 impl<T: TrackTrait> Default for DefaultPlaylist<T> {
     #[inline]
     fn default() -> Self {
-        DefaultPlaylist::new(None, PlaylistType::ALBUM, vec![])
+        DefaultPlaylist::new(None, PlaylistType::default(), vec![], 0)
     }
 }
 

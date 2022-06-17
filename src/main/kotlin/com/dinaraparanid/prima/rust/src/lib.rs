@@ -14,6 +14,7 @@ use futures::executor::block_on;
 use std::sync::Arc;
 
 use crate::{
+    audio_player::audio_player::AUDIO_PLAYER,
     audio_scanner::AudioScanner,
     entities::{
         playlists::{
@@ -162,7 +163,67 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrack
             .unwrap()
             .map(|jtrack| DefaultTrack::from(JTrack::from_env(&env, jtrack))),
         track_index as usize,
-    )
+    );
+
+    let (path, duration) = {
+        let track = &PARAMS.read();
+        let track = track
+            .as_ref()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .cur_playlist
+            .get_cur_track()
+            .unwrap();
+
+        (
+            track.get_path().clone(),
+            track.get_duration().to_std().unwrap(),
+        )
+    };
+
+    let is_playing = { AUDIO_PLAYER.read().unwrap().is_playing() };
+
+    if is_playing {
+        {
+            AUDIO_PLAYER.write().unwrap().stop();
+        }
+
+        if {
+            AUDIO_PLAYER
+                .read()
+                .unwrap()
+                .get_cur_path()
+                .unwrap()
+                .eq(&path)
+        } {
+            println!("PAUSE");
+            AUDIO_PLAYER.write().unwrap().pause()
+        } else {
+            println!("NEW TRACK 1");
+            block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
+        }
+    } else {
+        if AUDIO_PLAYER.read().unwrap().get_cur_path().is_none() {
+            println!("NEW TRACK 2");
+            block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
+        } else {
+            if {
+                AUDIO_PLAYER
+                    .read()
+                    .unwrap()
+                    .get_cur_path()
+                    .unwrap()
+                    .eq(&path)
+            } {
+                println!("RESUME");
+                AUDIO_PLAYER.write().unwrap().resume()
+            } else {
+                println!("NEW TRACK 3");
+                block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
+            }
+        }
+    }
 }
 
 #[no_mangle]

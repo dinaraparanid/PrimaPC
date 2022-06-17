@@ -1,9 +1,11 @@
 extern crate futures;
 extern crate jni;
 
+pub mod audio_player;
+pub mod audio_scanner;
 pub mod entities;
 pub mod jvm;
-pub(crate) mod utils;
+pub mod utils;
 
 #[cfg(test)]
 mod tests;
@@ -12,15 +14,18 @@ use futures::executor::block_on;
 use std::sync::Arc;
 
 use crate::{
-    entities::{playlists::playlist_trait::PlaylistTrait, tracks::track_trait::TrackTrait},
+    audio_scanner::AudioScanner,
+    entities::{
+        playlists::{
+            default_playlist::DefaultPlaylist, playlist_trait::PlaylistTrait,
+            playlist_type::PlaylistType,
+        },
+        tracks::{default_track::DefaultTrack, track_trait::TrackTrait},
+    },
     jvm::JVM,
-    utils::{audio_scanner::AudioScanner, extensions::track_ext::TrackExt, params::PARAMS},
+    utils::{extensions::track_ext::TrackExt, params::PARAMS, wrappers::jtrack::JTrack},
 };
 
-use crate::entities::playlists::default_playlist::DefaultPlaylist;
-use crate::entities::playlists::playlist_type::PlaylistType;
-use crate::entities::tracks::default_track::DefaultTrack;
-use crate::utils::wrappers::jtrack::JTrack;
 use jni::{
     objects::{JList, JObject, JString},
     sys::{jclass, jint, jintArray, jobject, jobjectArray, jsize, jstring},

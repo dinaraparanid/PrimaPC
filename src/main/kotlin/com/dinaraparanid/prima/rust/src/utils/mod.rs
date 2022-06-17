@@ -1,4 +1,3 @@
-pub mod audio_scanner;
 pub mod constants;
 pub mod extensions;
 pub mod params;

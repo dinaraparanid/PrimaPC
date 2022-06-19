@@ -8,10 +8,12 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
 import com.dinaraparanid.prima.ui.tracks.Tracks
 import com.dinaraparanid.prima.utils.Params
@@ -40,6 +42,7 @@ fun MainScreen() {
         )
     ) {
         val isPlayingState = remember { mutableStateOf(false) }
+        val tracksState = remember { mutableStateListOf<Track>() }
         val currentTrackState = remember { mutableStateOf(RustLibs.getCurTrack()) }
         val isPlayingCoverLoadedState = remember { mutableStateOf(false) }
         val playbackPositionState = remember { mutableStateOf(0F) } // TODO: load position
@@ -50,6 +53,7 @@ fun MainScreen() {
                     topBar = { AppBar() },
                     bottomBar = {
                         PlayingBar(
+                            tracksState,
                             currentTrackState,
                             isPlayingCoverLoadedState,
                             playbackPositionState,
@@ -60,10 +64,11 @@ fun MainScreen() {
                     // TODO: Load first screen
 
                     Tracks(
+                        tracksState,
                         currentTrackState,
                         isPlayingCoverLoadedState,
                         playbackPositionState,
-                        isPlayingState
+                        isPlayingState,
                     )
                 }
             }

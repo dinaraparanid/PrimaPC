@@ -11,7 +11,9 @@ pub mod utils;
 mod tests;
 
 use futures::executor::block_on;
+use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::{
     audio_player::audio_player::AUDIO_PLAYER,
@@ -146,6 +148,24 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_calcTra
     time
 }
 
+#[inline]
+fn get_path_and_duration_of_next_track() -> (PathBuf, Duration) {
+    let track = unsafe { &PARAMS.read() };
+    let track = track
+        .as_ref()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .cur_playlist
+        .get_cur_track()
+        .unwrap();
+
+    (
+        track.get_path().clone(),
+        track.get_duration().to_std().unwrap(),
+    )
+}
+
 #[no_mangle]
 #[allow(non_snake_case)]
 pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrackClicked(
@@ -165,22 +185,7 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrack
         track_index as usize,
     );
 
-    let (path, duration) = {
-        let track = &PARAMS.read();
-        let track = track
-            .as_ref()
-            .unwrap()
-            .as_ref()
-            .unwrap()
-            .cur_playlist
-            .get_cur_track()
-            .unwrap();
-
-        (
-            track.get_path().clone(),
-            track.get_duration().to_std().unwrap(),
-        )
-    };
+    let (path, duration) = get_path_and_duration_of_next_track();
 
     let is_playing = { AUDIO_PLAYER.read().unwrap().is_playing() };
 
@@ -238,7 +243,10 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onNextT
         .as_mut()
         .unwrap()
         .cur_playlist
-        .skip_to_next()
+        .skip_to_next();
+
+    let (path, duration) = get_path_and_duration_of_next_track();
+    block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
 }
 
 #[no_mangle]
@@ -253,5 +261,25 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPrevi
         .as_mut()
         .unwrap()
         .cur_playlist
-        .skip_to_prev()
+        .skip_to_prev();
+
+    let (path, duration) = get_path_and_duration_of_next_track();
+    block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrackIndex(
+    _env: JNIEnv,
+    _class: jclass,
+) -> jsize {
+    unsafe {
+        PARAMS
+            .read()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .cur_playlist
+            .get_cur_ind() as jsize
+    }
 }

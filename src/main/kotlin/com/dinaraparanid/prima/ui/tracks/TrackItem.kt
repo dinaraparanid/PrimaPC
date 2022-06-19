@@ -69,10 +69,15 @@ fun LazyItemScope.TrackItem(
     ) {
         Button(
             onClick = {
-                currentTrackState.value = track
-                isPlayingState.value = true
-                isPlayingCoverLoadedState.value = false
-                playbackPositionState.value = 0F
+                if (currentTrackState.value != track) {
+                    currentTrackState.value = track
+                    isPlayingState.value = true
+                    playbackPositionState.value = 0F
+                    isPlayingCoverLoadedState.value = false
+                } else {
+                    isPlayingState.value = !isPlayingState.value
+                }
+
                 RustLibs.onTrackClicked(tracks, index)
             },
             modifier = Modifier.fillMaxSize().padding(3.dp),

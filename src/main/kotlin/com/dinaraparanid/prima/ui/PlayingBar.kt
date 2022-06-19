@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +32,7 @@ import java.io.File
 
 @Composable
 fun PlayingBar(
+    tracksState: SnapshotStateList<Track>,
     currentTrackState: MutableState<Track?>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
@@ -67,7 +69,15 @@ fun PlayingBar(
         ) {
             Box(modifier = Modifier.fillMaxWidth().height(100.dp)) {
                 CurrentTrackData(currentTrackState, coverState, isPlayingCoverLoadedState)
-                ButtonsAndTrack(currentTrackState, isPlayingCoverLoadedState, playbackPositionState, isPlayingState)
+
+                ButtonsAndTrack(
+                    tracksState,
+                    currentTrackState,
+                    isPlayingCoverLoadedState,
+                    playbackPositionState,
+                    isPlayingState
+                )
+
                 Volume()
             }
         }
@@ -142,6 +152,7 @@ private fun BoxScope.CurrentTrackData(
 
 @Composable
 private fun ColumnScope.Buttons(
+    tracksState: SnapshotStateList<Track>,
     currentTrackState: MutableState<Track?>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
@@ -206,7 +217,7 @@ private fun ColumnScope.Buttons(
             modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
             onClick = {
                 isPlayingState.value = !isPlayingState.value
-                // TODO: Play / pause track
+                RustLibs.onTrackClicked(tracksState, RustLibs.getCurTrackIndex())
             }
         ) {
             Image(
@@ -317,6 +328,7 @@ private fun ColumnScope.Track(currentTrackState: State<Track?>, playbackPosition
 
 @Composable
 private fun BoxScope.ButtonsAndTrack(
+    tracksState: SnapshotStateList<Track>,
     currentTrackState: MutableState<Track?>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
@@ -329,7 +341,14 @@ private fun BoxScope.ButtonsAndTrack(
         .align(Alignment.Center),
 ) {
     Column(modifier = Modifier.width(750.dp)) {
-        Buttons(currentTrackState, isPlayingCoverLoadedState, playbackPositionState, isPlayingState)
+        Buttons(
+            tracksState,
+            currentTrackState,
+            isPlayingCoverLoadedState,
+            playbackPositionState,
+            isPlayingState
+        )
+
         Spacer(modifier = Modifier.height(20.dp).weight(1F))
         Track(currentTrackState, playbackPositionState)
     }

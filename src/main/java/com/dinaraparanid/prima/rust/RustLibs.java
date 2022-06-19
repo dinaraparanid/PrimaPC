@@ -28,6 +28,8 @@ public enum RustLibs {;
     @Nullable
     public static final native Track getCurTrack();
 
+    public static final native int getCurTrackIndex();
+
     /**
      * Calculates time in hh:mm:ss format
      * @param millis millisecond to convert

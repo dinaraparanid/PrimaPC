@@ -78,7 +78,7 @@ impl AudioPlayer {
 
                     if is_playing_clone.load(Ordering::SeqCst) {
                         let cur_dur = *position_clone.read().unwrap() + Duration::from_secs(1);
-                        *position_clone.write().unwrap() = cur_dur
+                        *position_clone.write().unwrap() = cur_dur;
                     }
                 }
             },
@@ -116,11 +116,6 @@ impl AudioPlayer {
             playback_position_controller,
             speed,
         ));
-
-        /*let (handle, reg) = AbortHandle::new_pair();
-        let task = Abortable::new(async { Delay::new(sleep_duration).await }, reg);
-        *sleep_task.write().unwrap() = Some(handle);
-        task.await.unwrap_or(());*/
     }
 
     #[inline]
@@ -183,12 +178,42 @@ impl AudioPlayer {
             task.abort()
         }
 
-        self.playback_data.as_mut().unwrap().2.pause()
+        self.playback_data.as_mut().unwrap().2.stop()
     }
 
     #[inline]
-    pub fn resume(&mut self) {
-        self.playback_data.as_mut().unwrap().2.play();
+    fn resume_with_result(&mut self) -> Result<()> {
+        let src = Source::buffered(Source::skip_duration(
+            Source::fade_in(
+                Source::reverb(
+                    self.get_buffered_source()?,
+                    self.playback_params.get_reverb().get_duration(),
+                    self.playback_params.get_reverb().get_amplitude(),
+                ),
+                self.playback_params.get_fade_in(),
+            ),
+            *self
+                .playback_position_controller
+                .read()
+                .unwrap()
+                .position
+                .read()
+                .unwrap(),
+        ));
+
+        let (stream, handle) = OutputStream::try_default().unwrap();
+        let sink = Sink::try_new(&handle).unwrap();
+        self.playback_data = Some((stream, handle, sink));
+
+        {
+            let speed = self.playback_params.get_speed();
+            let volume = self.playback_params.get_volume();
+            let refer = &mut self.playback_data.as_mut().unwrap().2;
+            refer.append(src);
+            refer.set_speed(speed);
+            refer.set_volume(volume);
+        }
+
         self.is_playing.store(true, Ordering::SeqCst);
 
         AudioPlayer::run_playback_preparation_tasks(
@@ -196,7 +221,14 @@ impl AudioPlayer {
             self.is_playing.clone(),
             self.playback_position_controller.clone(),
             self.get_speed(),
-        )
+        );
+
+        Ok(())
+    }
+
+    #[inline]
+    pub fn resume(&mut self) {
+        self.resume_with_result().unwrap_or(())
     }
 
     #[inline]

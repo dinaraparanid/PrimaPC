@@ -98,15 +98,16 @@ fun CoroutineScope.startPlaybackControlTasks(
             playbackPositionState,
         )
 
-        onPlaybackCompletition(
-            currentTrackState,
-            isPlayingState,
-            isPlayingCoverLoadedState,
-            playbackPositionState,
-            loopingState,
-            tracksState,
-            isPlaybackTrackDraggingState
-        )
+        if (RustLibs.getPlaybackPosition() == currentTrackState.value?.duration)
+            onPlaybackCompletition(
+                currentTrackState,
+                isPlayingState,
+                isPlayingCoverLoadedState,
+                playbackPositionState,
+                loopingState,
+                tracksState,
+                isPlaybackTrackDraggingState
+            )
     }
 }
 
@@ -182,37 +183,12 @@ fun CoroutineScope.onPlaybackCompletition(
     loopingState: MutableState<Int>,
     tracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>
-) = when (loopingState.value) {
-    // Playlist looping
-    0 -> switchToNextTrack(
-        currentTrackState,
-        isPlayingState,
-        isPlayingCoverLoadedState,
-        playbackPositionState,
-        loopingState,
-        tracksState,
-        isPlaybackTrackDraggingState
-    )
+) = when {
+    isPlaybackTrackDraggingState.value -> Unit
 
-    // Track looping
-    1 -> replayCurrentTrack(
-        currentTrackState,
-        isPlayingState,
-        isPlayingCoverLoadedState,
-        playbackPositionState,
-        loopingState,
-        tracksState,
-        isPlaybackTrackDraggingState
-    )
-
-    // No looping
-    else -> when {
-        RustLibs.getCurTrackIndex() == tracksState.size - 1 -> {
-            isPlayingState.value = false
-            playbackPositionState.value = RustLibs.getCurTrack()?.duration?.toFloat() ?: 0F
-        }
-
-        else -> switchToNextTrack(
+    else -> when (loopingState.value) {
+        // Playlist looping
+        0 -> switchToNextTrack(
             currentTrackState,
             isPlayingState,
             isPlayingCoverLoadedState,
@@ -221,5 +197,34 @@ fun CoroutineScope.onPlaybackCompletition(
             tracksState,
             isPlaybackTrackDraggingState
         )
+
+        // Track looping
+        1 -> replayCurrentTrack(
+            currentTrackState,
+            isPlayingState,
+            isPlayingCoverLoadedState,
+            playbackPositionState,
+            loopingState,
+            tracksState,
+            isPlaybackTrackDraggingState
+        )
+
+        // No looping
+        else -> when {
+            RustLibs.getCurTrackIndex() == tracksState.size - 1 -> {
+                isPlayingState.value = false
+                playbackPositionState.value = RustLibs.getCurTrack()?.duration?.toFloat() ?: 0F
+            }
+
+            else -> switchToNextTrack(
+                currentTrackState,
+                isPlayingState,
+                isPlayingCoverLoadedState,
+                playbackPositionState,
+                loopingState,
+                tracksState,
+                isPlaybackTrackDraggingState
+            )
+        }
     }
 }

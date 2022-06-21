@@ -173,7 +173,8 @@ private fun ColumnScope.Buttons(
             contentPadding = PaddingValues(3.dp),
             modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
             onClick = {
-                isLikedState.value = !isLikedState.value
+                if (currentTrackState.value != null)
+                    isLikedState.value = !isLikedState.value
                 // TODO: Like track
             }
         ) {
@@ -198,21 +199,23 @@ private fun ColumnScope.Buttons(
             contentPadding = PaddingValues(horizontal = 20.dp),
             modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
             onClick = {
-                RustLibs.onPreviousTrackClickedAsync()
-                currentTrackState.value = RustLibs.getCurTrack()
-                isPlayingState.value = true
-                isPlayingCoverLoadedState.value = false
-                playbackPositionState.value = 0F
+                if (currentTrackState.value != null) {
+                    RustLibs.onPreviousTrackClickedAsync()
+                    currentTrackState.value = RustLibs.getCurTrack()
+                    isPlayingState.value = true
+                    isPlayingCoverLoadedState.value = false
+                    playbackPositionState.value = 0F
 
-                coroutineScope.startPlaybackControlTasks(
-                    currentTrackState,
-                    isPlayingState,
-                    isPlayingCoverLoadedState,
-                    playbackPositionState,
-                    loopingState,
-                    tracksState,
-                    isPlaybackTrackDraggingState
-                )
+                    coroutineScope.startPlaybackControlTasks(
+                        currentTrackState,
+                        isPlayingState,
+                        isPlayingCoverLoadedState,
+                        playbackPositionState,
+                        loopingState,
+                        tracksState,
+                        isPlaybackTrackDraggingState
+                    )
+                }
             }
         ) {
             Image(
@@ -231,21 +234,23 @@ private fun ColumnScope.Buttons(
             contentPadding = PaddingValues(),
             modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
             onClick = {
-                isPlayingState.value = !isPlayingState.value
-                RustLibs.onTrackClickedAsync(tracksState, RustLibs.getCurTrackIndex())
+                if (currentTrackState.value != null) {
+                    isPlayingState.value = !isPlayingState.value
+                    RustLibs.onPlayButtonClickedAsync()
 
-                when {
-                    isPlayingState.value -> coroutineScope.startPlaybackControlTasks(
-                        currentTrackState,
-                        isPlayingState,
-                        isPlayingCoverLoadedState,
-                        playbackPositionState,
-                        loopingState,
-                        tracksState,
-                        isPlaybackTrackDraggingState
-                    )
+                    when {
+                        isPlayingState.value -> coroutineScope.startPlaybackControlTasks(
+                            currentTrackState,
+                            isPlayingState,
+                            isPlayingCoverLoadedState,
+                            playbackPositionState,
+                            loopingState,
+                            tracksState,
+                            isPlaybackTrackDraggingState
+                        )
 
-                    else -> cancelPlaybackControlTasks()
+                        else -> cancelPlaybackControlTasks()
+                    }
                 }
             }
         ) {
@@ -270,15 +275,16 @@ private fun ColumnScope.Buttons(
             contentPadding = PaddingValues(horizontal = 20.dp),
             modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
             onClick = {
-                coroutineScope.switchToNextTrack(
-                    currentTrackState,
-                    isPlayingState,
-                    isPlayingCoverLoadedState,
-                    playbackPositionState,
-                    loopingState,
-                    tracksState,
-                    isPlaybackTrackDraggingState
-                )
+                if (currentTrackState.value != null)
+                    coroutineScope.switchToNextTrack(
+                        currentTrackState,
+                        isPlayingState,
+                        isPlayingCoverLoadedState,
+                        playbackPositionState,
+                        loopingState,
+                        tracksState,
+                        isPlaybackTrackDraggingState
+                    )
             }
         ) {
             Image(
@@ -328,7 +334,7 @@ private fun ColumnScope.Track(
 
     Slider(
         value = playbackPositionState.value,
-        valueRange = (0F..(currentTrackState.value?.duration?.toFloat() ?: 1F)),
+        valueRange = (0F..(currentTrackState.value?.duration?.toFloat()?.coerceAtLeast(1F) ?: 1F)),
         colors = SliderDefaults.colors(
             thumbColor = Params.secondaryAlternativeColor,
             activeTrackColor = Params.secondaryAlternativeColor,
@@ -341,6 +347,7 @@ private fun ColumnScope.Track(
             cancelPlaybackControlTasks()
         },
         onValueChangeFinished = {
+            isPlayingState.value = true
             isPlaybackTrackDraggingState.value = false
 
             RustLibs.seekTo(playbackPositionState.value.toLong())
@@ -427,10 +434,11 @@ private fun BoxScope.Volume() = Row(modifier = Modifier.align(Alignment.CenterEn
         contentScale = ContentScale.Inside
     )
 
-    val sliderPosition = remember { mutableStateOf(0F) } // TODO: load volume
+    val sliderPosition = remember { mutableStateOf(1F) } // TODO: load volume
 
     Slider(
         value = sliderPosition.value,
+        valueRange = (0F..2F),
         colors = SliderDefaults.colors(
             thumbColor = Params.secondaryAlternativeColor,
             activeTrackColor = Params.secondaryAlternativeColor,
@@ -438,8 +446,6 @@ private fun BoxScope.Volume() = Row(modifier = Modifier.align(Alignment.CenterEn
         ),
         modifier = Modifier.width(150.dp),
         onValueChange = { sliderPosition.value = it },
-        onValueChangeFinished = {
-            // TODO: volume seek to position
-        }
+        onValueChangeFinished = { RustLibs.setVolume(sliderPosition.value) }
     )
 }

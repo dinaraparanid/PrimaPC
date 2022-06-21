@@ -82,6 +82,7 @@ impl AudioPlayer {
                         let cur_dur = *position_clone.read().unwrap() + Duration::from_millis(50);
 
                         if cur_dur > max_duration {
+                            *position_clone.write().unwrap() = max_duration;
                             is_playing_clone.store(false, Ordering::SeqCst);
                             break;
                         }
@@ -405,5 +406,10 @@ impl AudioPlayer {
             .position
             .read()
             .unwrap()
+    }
+
+    #[inline]
+    pub fn is_done(&self) -> bool {
+        self.playback_data.as_ref().unwrap().2.empty()
     }
 }

@@ -7,7 +7,9 @@
 
 **Current status**
 ------------------------
-**Work in progress**
+**Alpha V 0.1**
+
+![tracks](src/main/resources/images/tracks.png)
 
 **About App**
 ------------------------

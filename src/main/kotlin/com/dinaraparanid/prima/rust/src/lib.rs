@@ -29,7 +29,7 @@ use crate::{
 
 use jni::{
     objects::{JList, JObject, JString},
-    sys::{jclass, jint, jintArray, jlong, jobject, jobjectArray, jsize, jstring},
+    sys::*,
     JNIEnv,
 };
 
@@ -147,7 +147,7 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_calcTra
 }
 
 #[inline]
-fn get_path_and_duration_of_next_track() -> (PathBuf, Duration) {
+fn get_path_and_duration_of_cur_track() -> (PathBuf, Duration) {
     let track = unsafe { &PARAMS.read() };
     let track = track
         .as_ref()
@@ -162,6 +162,63 @@ fn get_path_and_duration_of_next_track() -> (PathBuf, Duration) {
         track.get_path().clone(),
         track.get_duration().to_std().unwrap(),
     )
+}
+
+#[inline]
+fn has_cur_track() -> bool {
+    let params = unsafe { &PARAMS.read() };
+    params
+        .as_ref()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .cur_playlist
+        .get_cur_track()
+        .is_some()
+}
+
+#[inline]
+fn play_pause_cur_track() {
+    let (path, duration) = get_path_and_duration_of_cur_track();
+    let is_playing = unsafe { AUDIO_PLAYER.read().unwrap().is_playing() };
+
+    if is_playing {
+        unsafe {
+            AUDIO_PLAYER.write().unwrap().stop();
+        }
+
+        if unsafe {
+            AUDIO_PLAYER
+                .read()
+                .unwrap()
+                .get_cur_path()
+                .unwrap()
+                .eq(&path)
+        } {
+            unsafe { AUDIO_PLAYER.write().unwrap().pause() }
+        } else {
+            block_on(unsafe { AUDIO_PLAYER.write().unwrap().play(path, duration) })
+        }
+    } else {
+        if unsafe { AUDIO_PLAYER.read().unwrap().get_cur_path().is_none() } {
+            block_on(unsafe { AUDIO_PLAYER.write().unwrap().play(path, duration) })
+        } else {
+            if {
+                unsafe {
+                    AUDIO_PLAYER
+                        .read()
+                        .unwrap()
+                        .get_cur_path()
+                        .unwrap()
+                        .eq(&path)
+                }
+            } {
+                unsafe { AUDIO_PLAYER.write().unwrap().resume() }
+            } else {
+                block_on(unsafe { AUDIO_PLAYER.write().unwrap().play(path, duration) })
+            }
+        }
+    }
 }
 
 #[no_mangle]
@@ -183,44 +240,17 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrack
         track_index as usize,
     );
 
-    let (path, duration) = get_path_and_duration_of_next_track();
+    play_pause_cur_track()
+}
 
-    let is_playing = { AUDIO_PLAYER.read().unwrap().is_playing() };
-
-    if is_playing {
-        {
-            AUDIO_PLAYER.write().unwrap().stop();
-        }
-
-        if {
-            AUDIO_PLAYER
-                .read()
-                .unwrap()
-                .get_cur_path()
-                .unwrap()
-                .eq(&path)
-        } {
-            AUDIO_PLAYER.write().unwrap().pause()
-        } else {
-            block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
-        }
-    } else {
-        if AUDIO_PLAYER.read().unwrap().get_cur_path().is_none() {
-            block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
-        } else {
-            if {
-                AUDIO_PLAYER
-                    .read()
-                    .unwrap()
-                    .get_cur_path()
-                    .unwrap()
-                    .eq(&path)
-            } {
-                AUDIO_PLAYER.write().unwrap().resume()
-            } else {
-                block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
-            }
-        }
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPlayButtonClickedAsync(
+    _env: JNIEnv,
+    _class: jclass,
+) {
+    if has_cur_track() {
+        play_pause_cur_track()
     }
 }
 
@@ -230,16 +260,18 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onNextT
     _env: JNIEnv,
     _class: jclass,
 ) {
-    PARAMS
-        .write()
-        .unwrap()
-        .as_mut()
-        .unwrap()
-        .cur_playlist
-        .skip_to_next();
+    if has_cur_track() {
+        PARAMS
+            .write()
+            .unwrap()
+            .as_mut()
+            .unwrap()
+            .cur_playlist
+            .skip_to_next();
 
-    let (path, duration) = get_path_and_duration_of_next_track();
-    block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
+        let (path, duration) = get_path_and_duration_of_cur_track();
+        block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
+    }
 }
 
 #[no_mangle]
@@ -248,16 +280,18 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPrevi
     _env: JNIEnv,
     _class: jclass,
 ) {
-    PARAMS
-        .write()
-        .unwrap()
-        .as_mut()
-        .unwrap()
-        .cur_playlist
-        .skip_to_prev();
+    if has_cur_track() {
+        PARAMS
+            .write()
+            .unwrap()
+            .as_mut()
+            .unwrap()
+            .cur_playlist
+            .skip_to_prev();
 
-    let (path, duration) = get_path_and_duration_of_next_track();
-    block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
+        let (path, duration) = get_path_and_duration_of_cur_track();
+        block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
+    }
 }
 
 #[no_mangle]
@@ -300,10 +334,12 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_seekTo(
     millis: jlong,
 ) {
     unsafe {
-        AUDIO_PLAYER
-            .write()
-            .unwrap()
-            .seek_to(Duration::from_millis(millis as u64))
+        if has_cur_track() {
+            AUDIO_PLAYER
+                .write()
+                .unwrap()
+                .seek_to(Duration::from_millis(millis as u64))
+        }
     }
 }
 
@@ -322,7 +358,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_replayCurrentT
     _env: JNIEnv,
     _class: jclass,
 ) {
-    let (path, duration) = get_path_and_duration_of_next_track();
+    let (path, duration) = get_path_and_duration_of_cur_track();
     unsafe { block_on(AUDIO_PLAYER.write().unwrap().play(path, duration)) }
 }
 
@@ -336,4 +372,14 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setNextLooping
         AUDIO_PLAYER.write().unwrap().set_next_looping_state();
         AUDIO_PLAYER.read().unwrap().get_looping_state().into()
     }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setVolume(
+    _env: JNIEnv,
+    _class: jclass,
+    volume: jfloat,
+) {
+    unsafe { AUDIO_PLAYER.write().unwrap().set_volume(volume as f32) }
 }

@@ -41,6 +41,8 @@ public enum RustLibs {;
 
     public static final native void onTrackClickedAsync(@NotNull final List<Track> tracks, final int trackIndex);
 
+    public static final native void onPlayButtonClickedAsync();
+
     public static final native void onNextTrackClickedAsync();
 
     public static final native void onPreviousTrackClickedAsync();
@@ -54,6 +56,8 @@ public enum RustLibs {;
     public static final native void seekTo(final long millis);
 
     public static final native int setNextLoopingState();
+
+    public static final native void setVolume(final float volume);
 
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;

@@ -39,11 +39,21 @@ public enum RustLibs {;
     @NotNull
     public static final native int[] calcTrackTime(final int millis);
 
-    public static final native void onTrackClicked(@NotNull final List<Track> tracks, final int trackIndex);
+    public static final native void onTrackClickedAsync(@NotNull final List<Track> tracks, final int trackIndex);
 
-    public static final native void onNextTrackClicked();
+    public static final native void onNextTrackClickedAsync();
 
-    public static final native void onPreviousTrackClicked();
+    public static final native void onPreviousTrackClickedAsync();
+
+    public static final native void replayCurrentTrackAsync();
+
+    public static final native long getPlaybackPosition();
+
+    public static final native boolean isPlaying();
+
+    public static final native void seekTo(final long millis);
+
+    public static final native int setNextLoopingState();
 
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;
@@ -71,7 +81,7 @@ public enum RustLibs {;
                     tag.getFirst(FieldKey.TITLE).getBytes(StandardCharsets.UTF_16),
                     tag.getFirst(FieldKey.ARTIST).getBytes(StandardCharsets.UTF_16),
                     tag.getFirst(FieldKey.ALBUM).getBytes(StandardCharsets.UTF_16),
-                    file.getAudioHeader().getTrackLength(),
+                    (long) file.getAudioHeader().getTrackLength() * 1000L,
                     numberInAlbum
             };
         } catch (final Exception e) {

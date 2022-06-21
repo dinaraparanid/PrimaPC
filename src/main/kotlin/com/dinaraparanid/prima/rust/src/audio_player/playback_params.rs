@@ -1,4 +1,7 @@
+extern crate jni;
+
 use crate::get_in_borders;
+use jni::sys::jint;
 use std::time::Duration;
 
 #[derive(Copy, Clone, Debug)]
@@ -102,9 +105,9 @@ impl PlaybackParams {
     #[inline]
     pub fn set_next_looping_state(&mut self) {
         let looping = match self.looping_state {
-            LoopingState::NoLooping => LoopingState::Track,
-            LoopingState::Track => LoopingState::Playlist,
-            LoopingState::Playlist => LoopingState::NoLooping,
+            LoopingState::NoLooping => LoopingState::Playlist,
+            LoopingState::Track => LoopingState::NoLooping,
+            LoopingState::Playlist => LoopingState::Track,
         };
 
         self.looping_state = looping
@@ -145,5 +148,16 @@ impl Default for LoopingState {
     #[inline]
     fn default() -> Self {
         Self::Playlist
+    }
+}
+
+impl From<LoopingState> for jint {
+    #[inline]
+    fn from(state: LoopingState) -> Self {
+        match state {
+            LoopingState::Playlist => 0,
+            LoopingState::Track => 1,
+            LoopingState::NoLooping => 2,
+        }
     }
 }

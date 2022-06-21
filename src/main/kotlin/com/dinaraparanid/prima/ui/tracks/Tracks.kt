@@ -16,11 +16,13 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun Tracks(
-    tracksState: SnapshotStateList<Track>,
     currentTrackState: MutableState<Track?>,
+    isPlayingState: MutableState<Boolean>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
-    isPlayingState: MutableState<Boolean>,
+    loopingState: MutableState<Int>,
+    tracksState: SnapshotStateList<Track>,
+    isPlaybackTrackDraggingState: State<Boolean>
 ) {
     val coroutineScope = rememberCoroutineScope()
     val tracksTask = coroutineScope.async(Dispatchers.IO) {
@@ -48,9 +50,12 @@ fun Tracks(
                     tracksState,
                     ind,
                     currentTrackState,
+                    isPlayingState,
                     isPlayingCoverLoadedState,
                     playbackPositionState,
-                    isPlayingState
+                    loopingState,
+                    tracksState,
+                    isPlaybackTrackDraggingState
                 )
             }
         }

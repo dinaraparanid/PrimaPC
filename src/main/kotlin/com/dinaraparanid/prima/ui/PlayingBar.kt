@@ -36,52 +36,55 @@ fun PlayingBar(
     currentTrackState: MutableState<Track?>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
-    isPlayingState: MutableState<Boolean>
-) =
-    BottomAppBar(
-        modifier = Modifier.fillMaxWidth().height(150.dp),
-        elevation = 10.dp
-    ) {
-        val coroutineScope = rememberCoroutineScope()
-        val coverState = remember { mutableStateOf(ImageBitmap(0, 0)) }
+    isPlayingState: MutableState<Boolean>,
+    isPlaybackTrackDraggingState: MutableState<Boolean>,
+    loopingState: MutableState<Int>
+) = BottomAppBar(
+    modifier = Modifier.fillMaxWidth().height(150.dp),
+    elevation = 10.dp
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val coverState = remember { mutableStateOf(ImageBitmap(0, 0)) }
 
-        val coverTask = currentTrackState.value?.let { track ->
-            coroutineScope.async(Dispatchers.IO) {
-                AudioFileIO.read(File(track.path.correctUTF8)).tagOrCreateAndSetDefault?.firstArtwork?.binaryData
-            }
-        }
-
-        coroutineScope.launch {
-            coverTask?.await()?.toList()?.let {
-                coverState.value = withContext(Dispatchers.IO) {
-                    org.jetbrains.skia.Image.makeFromEncoded(it.toByteArray()).toComposeImageBitmap()
-                }
-
-                isPlayingCoverLoadedState.value = true
-            }
-        }
-
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-            color = Params.primaryColor,
-            elevation = 10.dp
-        ) {
-            Box(modifier = Modifier.fillMaxWidth().height(100.dp)) {
-                CurrentTrackData(currentTrackState, coverState, isPlayingCoverLoadedState)
-
-                ButtonsAndTrack(
-                    tracksState,
-                    currentTrackState,
-                    isPlayingCoverLoadedState,
-                    playbackPositionState,
-                    isPlayingState
-                )
-
-                Volume()
-            }
+    val coverTask = currentTrackState.value?.let { track ->
+        coroutineScope.async(Dispatchers.IO) {
+            AudioFileIO.read(File(track.path.correctUTF8)).tagOrCreateAndSetDefault?.firstArtwork?.binaryData
         }
     }
+
+    coroutineScope.launch {
+        coverTask?.await()?.toList()?.let {
+            coverState.value = withContext(Dispatchers.IO) {
+                org.jetbrains.skia.Image.makeFromEncoded(it.toByteArray()).toComposeImageBitmap()
+            }
+
+            isPlayingCoverLoadedState.value = true
+        }
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        color = Params.primaryColor,
+        elevation = 10.dp
+    ) {
+        Box(modifier = Modifier.fillMaxWidth().height(100.dp)) {
+            CurrentTrackData(currentTrackState, coverState, isPlayingCoverLoadedState)
+
+            ButtonsAndTrack(
+                tracksState,
+                currentTrackState,
+                isPlayingCoverLoadedState,
+                playbackPositionState,
+                isPlayingState,
+                isPlaybackTrackDraggingState,
+                loopingState
+            )
+
+            Volume()
+        }
+    }
+}
 
 @Composable
 private fun BoxScope.CurrentTrackData(
@@ -156,10 +159,12 @@ private fun ColumnScope.Buttons(
     currentTrackState: MutableState<Track?>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
-    isPlayingState: MutableState<Boolean>
+    isPlayingState: MutableState<Boolean>,
+    isPlaybackTrackDraggingState: State<Boolean>,
+    loopingState: MutableState<Int>,
 ) {
     val isLikedState = remember { mutableStateOf(false) } // TODO: Load like status
-    val loopingState = remember { mutableStateOf(0) }          // TODO: Load looping status
+    val coroutineScope = rememberCoroutineScope()
 
     Row(modifier = Modifier.width(500.dp).weight(1F).align(Alignment.CenterHorizontally)) {
         Button(
@@ -193,11 +198,21 @@ private fun ColumnScope.Buttons(
             contentPadding = PaddingValues(horizontal = 20.dp),
             modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
             onClick = {
-                RustLibs.onPreviousTrackClicked()
+                RustLibs.onPreviousTrackClickedAsync()
                 currentTrackState.value = RustLibs.getCurTrack()
                 isPlayingState.value = true
                 isPlayingCoverLoadedState.value = false
                 playbackPositionState.value = 0F
+
+                coroutineScope.startPlaybackControlTasks(
+                    currentTrackState,
+                    isPlayingState,
+                    isPlayingCoverLoadedState,
+                    playbackPositionState,
+                    loopingState,
+                    tracksState,
+                    isPlaybackTrackDraggingState
+                )
             }
         ) {
             Image(
@@ -217,7 +232,21 @@ private fun ColumnScope.Buttons(
             modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
             onClick = {
                 isPlayingState.value = !isPlayingState.value
-                RustLibs.onTrackClicked(tracksState, RustLibs.getCurTrackIndex())
+                RustLibs.onTrackClickedAsync(tracksState, RustLibs.getCurTrackIndex())
+
+                when {
+                    isPlayingState.value -> coroutineScope.startPlaybackControlTasks(
+                        currentTrackState,
+                        isPlayingState,
+                        isPlayingCoverLoadedState,
+                        playbackPositionState,
+                        loopingState,
+                        tracksState,
+                        isPlaybackTrackDraggingState
+                    )
+
+                    else -> cancelPlaybackControlTasks()
+                }
             }
         ) {
             Image(
@@ -241,11 +270,15 @@ private fun ColumnScope.Buttons(
             contentPadding = PaddingValues(horizontal = 20.dp),
             modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
             onClick = {
-                RustLibs.onNextTrackClicked()
-                currentTrackState.value = RustLibs.getCurTrack()
-                isPlayingState.value = true
-                isPlayingCoverLoadedState.value = false
-                playbackPositionState.value = 0F
+                coroutineScope.switchToNextTrack(
+                    currentTrackState,
+                    isPlayingState,
+                    isPlayingCoverLoadedState,
+                    playbackPositionState,
+                    loopingState,
+                    tracksState,
+                    isPlaybackTrackDraggingState
+                )
             }
         ) {
             Image(
@@ -263,10 +296,7 @@ private fun ColumnScope.Buttons(
             elevation = null,
             contentPadding = PaddingValues(2.dp),
             modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
-            onClick = {
-                loopingState.value = (loopingState.value + 1) % 3
-                // TODO: Change looping status
-            }
+            onClick = { loopingState.value = RustLibs.setNextLoopingState() }
         ) {
             Image(
                 painter = painterResource(
@@ -285,46 +315,66 @@ private fun ColumnScope.Buttons(
 }
 
 @Composable
-private fun ColumnScope.Track(currentTrackState: State<Track?>, playbackPositionState: MutableState<Float>) =
-    Column(modifier = Modifier.fillMaxWidth().weight(1.5F).align(Alignment.CenterHorizontally)) {
-        val currentTimeState = remember { mutableStateOf(0) } // TODO: load current time
+private fun ColumnScope.Track(
+    currentTrackState: MutableState<Track?>,
+    isPlayingState: MutableState<Boolean>,
+    isPlayingCoverLoadedState: MutableState<Boolean>,
+    playbackPositionState: MutableState<Float>,
+    loopingState: MutableState<Int>,
+    tracksState: SnapshotStateList<Track>,
+    isPlaybackTrackDraggingState: MutableState<Boolean>
+) = Column(modifier = Modifier.fillMaxWidth().weight(1.5F).align(Alignment.CenterHorizontally)) {
+    val coroutineScope = rememberCoroutineScope()
 
-        Slider(
-            value = playbackPositionState.value,
-            valueRange = (0F..(currentTrackState.value?.duration?.toFloat() ?: 1F)),
-            colors = SliderDefaults.colors(
-                thumbColor = Params.secondaryAlternativeColor,
-                activeTrackColor = Params.secondaryAlternativeColor,
-                inactiveTrackColor = Params.secondaryColor
-            ),
-            modifier = Modifier.fillMaxWidth().height(20.dp),
-            onValueChange = {
-                playbackPositionState.value = it
-                currentTimeState.value = playbackPositionState.value.toInt()
-            },
-            onValueChangeFinished = {
-                // TODO: Seek playback to position
-            }
-        )
+    Slider(
+        value = playbackPositionState.value,
+        valueRange = (0F..(currentTrackState.value?.duration?.toFloat() ?: 1F)),
+        colors = SliderDefaults.colors(
+            thumbColor = Params.secondaryAlternativeColor,
+            activeTrackColor = Params.secondaryAlternativeColor,
+            inactiveTrackColor = Params.secondaryColor
+        ),
+        modifier = Modifier.fillMaxWidth().height(20.dp),
+        onValueChange = {
+            isPlaybackTrackDraggingState.value = true
+            playbackPositionState.value = it
+            cancelPlaybackControlTasks()
+        },
+        onValueChangeFinished = {
+            isPlaybackTrackDraggingState.value = false
 
-        Spacer(modifier = Modifier.height(10.dp))
+            RustLibs.seekTo(playbackPositionState.value.toLong())
 
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = calcTrackTime(currentTimeState.value).timeString,
-                color = Params.secondaryAlternativeColor,
-                fontSize = 14.sp
-            )
-
-            Spacer(modifier = Modifier.weight(1F))
-
-            Text(
-                text = calcTrackTime(currentTrackState.value?.duration?.toInt() ?: 0).timeString,
-                color = Params.secondaryAlternativeColor,
-                fontSize = 14.sp
+            coroutineScope.startPlaybackControlTasks(
+                currentTrackState,
+                isPlayingState,
+                isPlayingCoverLoadedState,
+                playbackPositionState,
+                loopingState,
+                tracksState,
+                isPlaybackTrackDraggingState
             )
         }
+    )
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = calcTrackTime(playbackPositionState.value.toInt()).timeString,
+            color = Params.secondaryAlternativeColor,
+            fontSize = 14.sp
+        )
+
+        Spacer(modifier = Modifier.weight(1F))
+
+        Text(
+            text = calcTrackTime(currentTrackState.value?.duration?.toInt() ?: 0).timeString,
+            color = Params.secondaryAlternativeColor,
+            fontSize = 14.sp
+        )
     }
+}
 
 @Composable
 private fun BoxScope.ButtonsAndTrack(
@@ -332,7 +382,9 @@ private fun BoxScope.ButtonsAndTrack(
     currentTrackState: MutableState<Track?>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
-    isPlayingState: MutableState<Boolean>
+    isPlayingState: MutableState<Boolean>,
+    isPlaybackTrackDraggingState: MutableState<Boolean>,
+    loopingState: MutableState<Int>
 ) = Surface(
     color = Color.Transparent,
     modifier = Modifier
@@ -346,11 +398,22 @@ private fun BoxScope.ButtonsAndTrack(
             currentTrackState,
             isPlayingCoverLoadedState,
             playbackPositionState,
-            isPlayingState
+            isPlayingState,
+            isPlaybackTrackDraggingState,
+            loopingState
         )
 
         Spacer(modifier = Modifier.height(20.dp).weight(1F))
-        Track(currentTrackState, playbackPositionState)
+
+        Track(
+            currentTrackState,
+            isPlayingState,
+            isPlayingCoverLoadedState,
+            playbackPositionState,
+            loopingState,
+            tracksState,
+            isPlaybackTrackDraggingState
+        )
     }
 }
 
@@ -376,7 +439,7 @@ private fun BoxScope.Volume() = Row(modifier = Modifier.align(Alignment.CenterEn
         modifier = Modifier.width(150.dp),
         onValueChange = { sliderPosition.value = it },
         onValueChangeFinished = {
-            // TODO: playback seek to position
+            // TODO: volume seek to position
         }
     )
 }

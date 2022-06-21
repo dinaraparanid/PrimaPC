@@ -80,7 +80,7 @@ impl<T: TrackTrait> TrackExt for T {
                 JValue::Object(JObject::from(
                     env.byte_array_from_slice(path_buf.as_slice()).unwrap(),
                 )),
-                JValue::Long(self.get_duration().num_seconds() as jlong),
+                JValue::Long(self.get_duration().num_milliseconds() as jlong),
                 JValue::Short(self.get_number_in_album() as jshort),
             ],
         )

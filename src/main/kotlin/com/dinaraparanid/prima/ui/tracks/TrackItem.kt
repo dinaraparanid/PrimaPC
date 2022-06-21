@@ -11,6 +11,7 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
+import com.dinaraparanid.prima.ui.cancelPlaybackControlTasks
+import com.dinaraparanid.prima.ui.startPlaybackControlTasks
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.extensions.correctUTF8
 import com.dinaraparanid.prima.utils.localization.Localization
@@ -37,9 +40,12 @@ fun LazyItemScope.TrackItem(
     tracks: List<Track>,
     index: Int,
     currentTrackState: MutableState<Track?>,
+    isPlayingState: MutableState<Boolean>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
-    isPlayingState: MutableState<Boolean>
+    loopingState: MutableState<Int>,
+    tracksState: SnapshotStateList<Track>,
+    isPlaybackTrackDraggingState: State<Boolean>
 ) {
     val track = tracks[index]
     val coroutineScope = rememberCoroutineScope()
@@ -78,7 +84,21 @@ fun LazyItemScope.TrackItem(
                     isPlayingState.value = !isPlayingState.value
                 }
 
-                RustLibs.onTrackClicked(tracks, index)
+                RustLibs.onTrackClickedAsync(tracks, index)
+
+                when {
+                    isPlayingState.value -> coroutineScope.startPlaybackControlTasks(
+                        currentTrackState,
+                        isPlayingState,
+                        isPlayingCoverLoadedState,
+                        playbackPositionState,
+                        loopingState,
+                        tracksState,
+                        isPlaybackTrackDraggingState
+                    )
+
+                    else -> cancelPlaybackControlTasks()
+                }
             },
             modifier = Modifier.fillMaxSize().padding(3.dp),
             colors = ButtonDefaults.buttonColors(backgroundColor = Params.secondaryColor),

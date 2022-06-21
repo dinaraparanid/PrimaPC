@@ -34,9 +34,9 @@ impl JObjectExt for JObject<'_> {
             JNIEnvExt::call_static_method(
                 jni_env,
                 "com/dinaraparanid/prima/rust/RustLibs",
-                "toIntPrimitive",
-                "(Ljava/lang/Integer;)I",
-                JavaType::Primitive(Primitive::Int),
+                "toLongPrimitive",
+                "(Ljava/lang/Long;)J",
+                JavaType::Primitive(Primitive::Long),
                 &[JValue::Object(
                     jni_env
                         .get_object_array_element(self.into_inner(), 3)
@@ -44,7 +44,7 @@ impl JObjectExt for JObject<'_> {
                 )],
             )
         }
-        .i()
+        .j()
         .unwrap();
 
         let number_in_album = unsafe {
@@ -69,7 +69,7 @@ impl JObjectExt for JObject<'_> {
             artist,
             album,
             path.clone(),
-            Duration::seconds(duration as i64),
+            Duration::milliseconds(duration as i64),
             DateTime::from(std::fs::metadata(path).unwrap().created().unwrap()),
             number_in_album,
         ))

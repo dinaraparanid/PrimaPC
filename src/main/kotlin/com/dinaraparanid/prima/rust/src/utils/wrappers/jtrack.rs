@@ -139,7 +139,7 @@ impl JTrack {
                             )
                             .unwrap(),
                     )),
-                    JValue::Long(self.get_duration().num_seconds() as jlong),
+                    JValue::Long(self.get_duration().num_milliseconds() as jlong),
                     JValue::Short(self.get_number_in_album() as jshort),
                 ],
             )
@@ -281,7 +281,7 @@ fn get_string_field_of_jtrack(
 
 #[inline]
 fn get_duration_field_of_jtrack(jni_env: &JNIEnv, jtrack: &JObject) -> Duration {
-    Duration::seconds(
+    Duration::milliseconds(
         unsafe {
             JNIEnvExt::get_field(
                 jni_env,

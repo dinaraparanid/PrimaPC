@@ -11,9 +11,7 @@ pub mod utils;
 mod tests;
 
 use futures::executor::block_on;
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use crate::{
     audio_player::audio_player::AUDIO_PLAYER,
@@ -31,7 +29,7 @@ use crate::{
 
 use jni::{
     objects::{JList, JObject, JString},
-    sys::{jclass, jint, jintArray, jobject, jobjectArray, jsize, jstring},
+    sys::{jclass, jint, jintArray, jlong, jobject, jobjectArray, jsize, jstring},
     JNIEnv,
 };
 
@@ -133,13 +131,13 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_calcTra
 ) -> jintArray {
     let time = env.new_int_array(3).unwrap_unchecked();
 
-    let h = millis / 3600;
-    millis -= h * 3600;
+    let h = millis / 3600000;
+    millis -= h * 3600000;
 
-    let m = millis / 60;
-    millis -= m * 60;
+    let m = millis / 60000;
+    millis -= m * 60000;
 
-    let s = millis;
+    let s = millis / 1000;
 
     let arr = [h, m, s];
 
@@ -168,7 +166,7 @@ fn get_path_and_duration_of_next_track() -> (PathBuf, Duration) {
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrackClicked(
+pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrackClickedAsync(
     env: JNIEnv,
     _class: jclass,
     tracks: JObject,
@@ -202,15 +200,12 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrack
                 .unwrap()
                 .eq(&path)
         } {
-            println!("PAUSE");
             AUDIO_PLAYER.write().unwrap().pause()
         } else {
-            println!("NEW TRACK 1");
             block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
         }
     } else {
         if AUDIO_PLAYER.read().unwrap().get_cur_path().is_none() {
-            println!("NEW TRACK 2");
             block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
         } else {
             if {
@@ -221,10 +216,8 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrack
                     .unwrap()
                     .eq(&path)
             } {
-                println!("RESUME");
                 AUDIO_PLAYER.write().unwrap().resume()
             } else {
-                println!("NEW TRACK 3");
                 block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
             }
         }
@@ -233,7 +226,7 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrack
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onNextTrackClicked(
+pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onNextTrackClickedAsync(
     _env: JNIEnv,
     _class: jclass,
 ) {
@@ -251,7 +244,7 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onNextT
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPreviousTrackClicked(
+pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPreviousTrackClickedAsync(
     _env: JNIEnv,
     _class: jclass,
 ) {
@@ -281,5 +274,66 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrackInd
             .unwrap()
             .cur_playlist
             .get_cur_ind() as jsize
+    }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getPlaybackPosition(
+    _env: JNIEnv,
+    _class: jclass,
+) -> jlong {
+    unsafe {
+        AUDIO_PLAYER
+            .read()
+            .unwrap()
+            .get_cur_playback_pos()
+            .as_millis() as jlong
+    }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_seekTo(
+    _env: JNIEnv,
+    _class: jclass,
+    millis: jlong,
+) {
+    unsafe {
+        AUDIO_PLAYER
+            .write()
+            .unwrap()
+            .seek_to(Duration::from_millis(millis as u64))
+    }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isPlaying(
+    _env: JNIEnv,
+    _class: jclass,
+) -> bool {
+    unsafe { AUDIO_PLAYER.read().unwrap().is_playing() }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_replayCurrentTrackAsync(
+    _env: JNIEnv,
+    _class: jclass,
+) {
+    let (path, duration) = get_path_and_duration_of_next_track();
+    unsafe { block_on(AUDIO_PLAYER.write().unwrap().play(path, duration)) }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setNextLoopingState(
+    _env: JNIEnv,
+    _class: jclass,
+) -> jint {
+    unsafe {
+        AUDIO_PLAYER.write().unwrap().set_next_looping_state();
+        AUDIO_PLAYER.read().unwrap().get_looping_state().into()
     }
 }

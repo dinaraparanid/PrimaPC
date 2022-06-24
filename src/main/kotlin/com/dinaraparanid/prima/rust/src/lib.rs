@@ -383,3 +383,40 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setVolume(
 ) {
     unsafe { AUDIO_PLAYER.write().unwrap().set_volume(volume as f32) }
 }
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setSpeed(
+    _env: JNIEnv,
+    _class: jclass,
+    speed: jfloat,
+) {
+    unsafe { AUDIO_PLAYER.write().unwrap().set_speed(speed as f32) }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getVolume(
+    _env: JNIEnv,
+    _class: jclass,
+) -> jfloat {
+    unsafe { AUDIO_PLAYER.write().unwrap().get_volume() as jfloat }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getSpeed(
+    _env: JNIEnv,
+    _class: jclass,
+) -> jfloat {
+    unsafe { AUDIO_PLAYER.write().unwrap().get_speed() as jfloat }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getLoopingState(
+    _env: JNIEnv,
+    _class: jclass,
+) -> jint {
+    unsafe { AUDIO_PLAYER.write().unwrap().get_looping_state().into() }
+}

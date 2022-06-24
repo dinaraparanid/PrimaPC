@@ -1,13 +1,19 @@
+extern crate atomic_float;
 extern crate jni;
 
 use crate::get_in_borders;
+use atomic_float::AtomicF32;
 use jni::sys::jint;
-use std::time::Duration;
 
-#[derive(Copy, Clone, Debug)]
+use std::{
+    sync::{atomic::Ordering, Arc},
+    time::Duration,
+};
+
+#[derive(Clone, Debug)]
 pub struct PlaybackParams {
     volume: f32,
-    speed: f32,
+    speed: Arc<AtomicF32>,
     reverb: ReverbParams,
     fade_in: Duration,
     looping_state: LoopingState,
@@ -31,7 +37,7 @@ impl Default for PlaybackParams {
     fn default() -> Self {
         Self {
             volume: 1_f32,
-            speed: 1_f32,
+            speed: Arc::new(AtomicF32::new(1_f32)),
             reverb: ReverbParams::default(),
             fade_in: Duration::default(),
             looping_state: LoopingState::default(),
@@ -50,7 +56,7 @@ impl PlaybackParams {
     ) -> Self {
         Self {
             volume,
-            speed,
+            speed: Arc::new(AtomicF32::new(speed)),
             reverb,
             fade_in,
             looping_state,
@@ -64,7 +70,12 @@ impl PlaybackParams {
 
     #[inline]
     pub fn get_speed(&self) -> f32 {
-        self.speed
+        self.speed.load(Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn get_speed_ref(&self) -> Arc<AtomicF32> {
+        self.speed.clone()
     }
 
     #[inline]
@@ -89,7 +100,10 @@ impl PlaybackParams {
 
     #[inline]
     pub fn set_speed(&mut self, speed: f32) {
-        self.speed = get_in_borders!(speed, 0.5, 2_f32, f32::min, f32::max)
+        self.speed.store(
+            get_in_borders!(speed, 0.5, 2_f32, f32::min, f32::max),
+            Ordering::SeqCst,
+        )
     }
 
     #[inline]

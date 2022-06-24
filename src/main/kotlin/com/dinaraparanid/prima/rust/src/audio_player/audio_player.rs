@@ -1,8 +1,10 @@
+extern crate atomic_float;
 extern crate futures;
 extern crate futures_timer;
 extern crate once_cell;
 extern crate rodio;
 
+use atomic_float::AtomicF32;
 use futures_timer::Delay;
 use once_cell::sync::Lazy;
 use rodio::{source::Buffered, Decoder, OutputStream, OutputStreamHandle, Sink, Source};
@@ -61,7 +63,7 @@ impl AudioPlayer {
     async fn run_playback_control_task(
         is_playing: Arc<AtomicBool>,
         playback_position_controller: Arc<RwLock<PlaybackPositionController>>,
-        speed: f32,
+        speed: Arc<AtomicF32>,
         max_duration: Duration,
     ) {
         let (handle, reg) = AbortHandle::new_pair();
@@ -76,10 +78,11 @@ impl AudioPlayer {
         let task = Abortable::new(
             async move {
                 while is_playing_clone.load(Ordering::SeqCst) {
-                    Delay::new(Duration::from_millis((50.0 * speed) as u64)).await;
+                    Delay::new(Duration::from_millis((50.0) as u64)).await;
 
                     if is_playing_clone.load(Ordering::SeqCst) {
-                        let cur_dur = *position_clone.read().unwrap() + Duration::from_millis(50);
+                        let cur_dur = *position_clone.read().unwrap()
+                            + Duration::from_millis((50.0 * speed.load(Ordering::SeqCst)) as u64);
 
                         if cur_dur > max_duration {
                             *position_clone.write().unwrap() = max_duration;
@@ -118,7 +121,7 @@ impl AudioPlayer {
         pool: ThreadPool,
         is_playing: Arc<AtomicBool>,
         playback_position_controller: Arc<RwLock<PlaybackPositionController>>,
-        speed: f32,
+        speed: Arc<AtomicF32>,
         max_duration: Duration,
     ) {
         pool.spawn_ok(AudioPlayer::run_playback_control_task(
@@ -170,7 +173,7 @@ impl AudioPlayer {
             self.pool.clone(),
             self.is_playing.clone(),
             self.playback_position_controller.clone(),
-            self.get_speed(),
+            self.get_speed_ref(),
             self.total_duration,
         );
 
@@ -265,7 +268,7 @@ impl AudioPlayer {
             self.pool.clone(),
             self.is_playing.clone(),
             self.playback_position_controller.clone(),
-            self.get_speed(),
+            self.get_speed_ref(),
             self.total_duration,
         );
 
@@ -279,12 +282,20 @@ impl AudioPlayer {
 
     #[inline]
     pub fn get_volume(&self) -> f32 {
-        self.playback_data.as_ref().unwrap().2.volume()
+        self.playback_data
+            .as_ref()
+            .map(|pd| pd.2.speed())
+            .unwrap_or(1.0)
     }
 
     #[inline]
     pub fn get_speed(&self) -> f32 {
-        self.playback_data.as_ref().unwrap().2.speed()
+        self.playback_params.get_speed()
+    }
+
+    #[inline]
+    pub fn get_speed_ref(&self) -> Arc<AtomicF32> {
+        self.playback_params.get_speed_ref()
     }
 
     #[inline]
@@ -306,14 +317,20 @@ impl AudioPlayer {
     pub fn set_volume(&mut self, volume: f32) {
         self.playback_params.set_volume(volume);
         let volume = self.playback_params.get_volume();
-        self.playback_data.as_mut().unwrap().2.set_volume(volume)
+
+        if let Some(ref pd) = self.playback_data {
+            pd.2.set_volume(volume)
+        }
     }
 
     #[inline]
     pub fn set_speed(&mut self, speed: f32) {
         self.playback_params.set_speed(speed);
         let speed = self.playback_params.get_speed();
-        self.playback_data.as_mut().unwrap().2.set_speed(speed)
+
+        if let Some(ref pd) = self.playback_data {
+            pd.2.set_speed(speed)
+        }
     }
 
     #[inline]
@@ -344,7 +361,7 @@ impl AudioPlayer {
             self.pool.clone(),
             self.is_playing.clone(),
             self.playback_position_controller.clone(),
-            self.get_speed(),
+            self.get_speed_ref(),
             self.total_duration,
         );
 
@@ -375,7 +392,7 @@ impl AudioPlayer {
             self.pool.clone(),
             self.is_playing.clone(),
             self.playback_position_controller.clone(),
-            self.get_speed(),
+            self.get_speed_ref(),
             self.total_duration,
         );
 

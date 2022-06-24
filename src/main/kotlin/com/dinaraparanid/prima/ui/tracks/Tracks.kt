@@ -22,7 +22,8 @@ fun Tracks(
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
     tracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>
+    isPlaybackTrackDraggingState: State<Boolean>,
+    speedState: State<Float>
 ) {
     val coroutineScope = rememberCoroutineScope()
     val tracksTask = coroutineScope.async(Dispatchers.IO) {
@@ -55,7 +56,8 @@ fun Tracks(
                     playbackPositionState,
                     loopingState,
                     tracksState,
-                    isPlaybackTrackDraggingState
+                    isPlaybackTrackDraggingState,
+                    speedState
                 )
             }
         }

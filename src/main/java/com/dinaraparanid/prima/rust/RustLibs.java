@@ -59,6 +59,14 @@ public enum RustLibs {;
 
     public static final native void setVolume(final float volume);
 
+    public static final native void setSpeed(final float speed);
+
+    public static final native float getVolume();
+
+    public static final native float getSpeed();
+
+    public static final native int getLoopingState();
+
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;
     }

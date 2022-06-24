@@ -45,8 +45,10 @@ fun MainScreen() {
         val currentTrackState = remember { mutableStateOf(RustLibs.getCurTrack()) }
         val isPlayingCoverLoadedState = remember { mutableStateOf(false) }
         val isPlaybackTrackDraggingState = remember { mutableStateOf(false) }
-        val playbackPositionState = remember { mutableStateOf(0F) } // TODO: load position
-        val loopingState = remember { mutableStateOf(0) }             // TODO: Load looping status
+        val playbackPositionState = remember { mutableStateOf(RustLibs.getPlaybackPosition().toFloat()) }
+        val loopingState = remember { mutableStateOf(RustLibs.getLoopingState()) }
+        val speedState = remember { mutableStateOf(RustLibs.getSpeed()) }
+        val volumeState = remember { mutableStateOf(RustLibs.getVolume()) }
 
         Surface(color = secondary, modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -60,7 +62,9 @@ fun MainScreen() {
                             playbackPositionState,
                             isPlayingState,
                             isPlaybackTrackDraggingState,
-                            loopingState
+                            loopingState,
+                            speedState,
+                            volumeState
                         )
                     }
                 ) {
@@ -73,7 +77,8 @@ fun MainScreen() {
                         playbackPositionState,
                         loopingState,
                         tracksState,
-                        isPlaybackTrackDraggingState
+                        isPlaybackTrackDraggingState,
+                        speedState
                     )
                 }
             }
@@ -90,7 +95,8 @@ fun CoroutineScope.startPlaybackControlTasks(
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
     tracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>
+    isPlaybackTrackDraggingState: State<Boolean>,
+    speedState: State<Float>
 ) {
     playbackControlTasks = launch(Dispatchers.Default) {
         runCalculationOfSliderPos(
@@ -106,7 +112,8 @@ fun CoroutineScope.startPlaybackControlTasks(
                 playbackPositionState,
                 loopingState,
                 tracksState,
-                isPlaybackTrackDraggingState
+                isPlaybackTrackDraggingState,
+                speedState
             )
     }
 }
@@ -134,7 +141,8 @@ fun CoroutineScope.switchToNextTrack(
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
     tracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>
+    isPlaybackTrackDraggingState: State<Boolean>,
+    speedState: State<Float>
 ) {
     RustLibs.onNextTrackClickedAsync()
     currentTrackState.value = RustLibs.getCurTrack()
@@ -149,7 +157,8 @@ fun CoroutineScope.switchToNextTrack(
         playbackPositionState,
         loopingState,
         tracksState,
-        isPlaybackTrackDraggingState
+        isPlaybackTrackDraggingState,
+        speedState
     )
 }
 
@@ -160,7 +169,8 @@ private fun CoroutineScope.replayCurrentTrack(
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
     tracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>
+    isPlaybackTrackDraggingState: State<Boolean>,
+    speedState: State<Float>
 ) {
     RustLibs.replayCurrentTrackAsync()
 
@@ -171,7 +181,8 @@ private fun CoroutineScope.replayCurrentTrack(
         playbackPositionState,
         loopingState,
         tracksState,
-        isPlaybackTrackDraggingState
+        isPlaybackTrackDraggingState,
+        speedState
     )
 }
 
@@ -182,7 +193,8 @@ fun CoroutineScope.onPlaybackCompletition(
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
     tracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>
+    isPlaybackTrackDraggingState: State<Boolean>,
+    speedState: State<Float>
 ) = when {
     isPlaybackTrackDraggingState.value -> Unit
 
@@ -195,7 +207,8 @@ fun CoroutineScope.onPlaybackCompletition(
             playbackPositionState,
             loopingState,
             tracksState,
-            isPlaybackTrackDraggingState
+            isPlaybackTrackDraggingState,
+            speedState
         )
 
         // Track looping
@@ -206,7 +219,8 @@ fun CoroutineScope.onPlaybackCompletition(
             playbackPositionState,
             loopingState,
             tracksState,
-            isPlaybackTrackDraggingState
+            isPlaybackTrackDraggingState,
+            speedState
         )
 
         // No looping
@@ -223,7 +237,8 @@ fun CoroutineScope.onPlaybackCompletition(
                 playbackPositionState,
                 loopingState,
                 tracksState,
-                isPlaybackTrackDraggingState
+                isPlaybackTrackDraggingState,
+                speedState
             )
         }
     }

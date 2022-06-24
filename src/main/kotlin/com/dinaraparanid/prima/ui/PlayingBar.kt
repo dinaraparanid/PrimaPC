@@ -21,6 +21,7 @@ import com.dinaraparanid.prima.rust.RustLibs
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.calcTrackTime
 import com.dinaraparanid.prima.utils.extensions.correctUTF8
+import com.dinaraparanid.prima.utils.extensions.take
 import com.dinaraparanid.prima.utils.extensions.timeString
 import com.dinaraparanid.prima.utils.localization.Localization
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +39,9 @@ fun PlayingBar(
     playbackPositionState: MutableState<Float>,
     isPlayingState: MutableState<Boolean>,
     isPlaybackTrackDraggingState: MutableState<Boolean>,
-    loopingState: MutableState<Int>
+    loopingState: MutableState<Int>,
+    speedState: MutableState<Float>,
+    volumeState: MutableState<Float>
 ) = BottomAppBar(
     modifier = Modifier.fillMaxWidth().height(150.dp),
     elevation = 10.dp
@@ -78,10 +81,11 @@ fun PlayingBar(
                 playbackPositionState,
                 isPlayingState,
                 isPlaybackTrackDraggingState,
-                loopingState
+                loopingState,
+                speedState
             )
 
-            Volume()
+            Sliders(volumeState, speedState)
         }
     }
 }
@@ -162,6 +166,7 @@ private fun ColumnScope.Buttons(
     isPlayingState: MutableState<Boolean>,
     isPlaybackTrackDraggingState: State<Boolean>,
     loopingState: MutableState<Int>,
+    speedState: State<Float>
 ) {
     val isLikedState = remember { mutableStateOf(false) } // TODO: Load like status
     val coroutineScope = rememberCoroutineScope()
@@ -213,7 +218,8 @@ private fun ColumnScope.Buttons(
                         playbackPositionState,
                         loopingState,
                         tracksState,
-                        isPlaybackTrackDraggingState
+                        isPlaybackTrackDraggingState,
+                        speedState
                     )
                 }
             }
@@ -246,7 +252,8 @@ private fun ColumnScope.Buttons(
                             playbackPositionState,
                             loopingState,
                             tracksState,
-                            isPlaybackTrackDraggingState
+                            isPlaybackTrackDraggingState,
+                            speedState
                         )
 
                         else -> cancelPlaybackControlTasks()
@@ -283,7 +290,8 @@ private fun ColumnScope.Buttons(
                         playbackPositionState,
                         loopingState,
                         tracksState,
-                        isPlaybackTrackDraggingState
+                        isPlaybackTrackDraggingState,
+                        speedState
                     )
             }
         ) {
@@ -328,7 +336,8 @@ private fun ColumnScope.Track(
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
     tracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: MutableState<Boolean>
+    isPlaybackTrackDraggingState: MutableState<Boolean>,
+    speedState: State<Float>
 ) = Column(modifier = Modifier.fillMaxWidth().weight(1.5F).align(Alignment.CenterHorizontally)) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -359,7 +368,8 @@ private fun ColumnScope.Track(
                 playbackPositionState,
                 loopingState,
                 tracksState,
-                isPlaybackTrackDraggingState
+                isPlaybackTrackDraggingState,
+                speedState
             )
         }
     )
@@ -391,7 +401,8 @@ private fun BoxScope.ButtonsAndTrack(
     playbackPositionState: MutableState<Float>,
     isPlayingState: MutableState<Boolean>,
     isPlaybackTrackDraggingState: MutableState<Boolean>,
-    loopingState: MutableState<Int>
+    loopingState: MutableState<Int>,
+    speedState: State<Float>
 ) = Surface(
     color = Color.Transparent,
     modifier = Modifier
@@ -407,7 +418,8 @@ private fun BoxScope.ButtonsAndTrack(
             playbackPositionState,
             isPlayingState,
             isPlaybackTrackDraggingState,
-            loopingState
+            loopingState,
+            speedState
         )
 
         Spacer(modifier = Modifier.height(20.dp).weight(1F))
@@ -419,13 +431,21 @@ private fun BoxScope.ButtonsAndTrack(
             playbackPositionState,
             loopingState,
             tracksState,
-            isPlaybackTrackDraggingState
+            isPlaybackTrackDraggingState,
+            speedState
         )
     }
 }
 
 @Composable
-private fun BoxScope.Volume() = Row(modifier = Modifier.align(Alignment.CenterEnd).padding(10.dp)) {
+private fun BoxScope.Sliders(volumeState: MutableState<Float>, speedState: MutableState<Float>) =
+    Column(modifier = Modifier.align(Alignment.CenterEnd).padding(10.dp)) {
+        Volume(volumeState)
+        Speed(speedState)
+    }
+
+@Composable
+private fun Volume(volumeState: MutableState<Float>) = Row(modifier = Modifier.padding(10.dp)) {
     Image(
         painter = painterResource("images/volume_icon.png"),
         contentDescription = Localization.trackCover.resource,
@@ -434,10 +454,8 @@ private fun BoxScope.Volume() = Row(modifier = Modifier.align(Alignment.CenterEn
         contentScale = ContentScale.Inside
     )
 
-    val sliderPosition = remember { mutableStateOf(1F) } // TODO: load volume
-
     Slider(
-        value = sliderPosition.value,
+        value = volumeState.value,
         valueRange = (0F..2F),
         colors = SliderDefaults.colors(
             thumbColor = Params.secondaryAlternativeColor,
@@ -445,7 +463,41 @@ private fun BoxScope.Volume() = Row(modifier = Modifier.align(Alignment.CenterEn
             inactiveTrackColor = Params.secondaryColor
         ),
         modifier = Modifier.width(150.dp),
-        onValueChange = { sliderPosition.value = it },
-        onValueChangeFinished = { RustLibs.setVolume(sliderPosition.value) }
+        onValueChange = { volumeState.value = it },
+        onValueChangeFinished = { RustLibs.setVolume(volumeState.value) }
+    )
+
+    Text(text = volumeState.value.take(4), fontSize = 14.sp, color = Params.secondaryAlternativeColor)
+}
+
+@Composable
+private fun Speed(speedState: MutableState<Float>) = Row(modifier = Modifier.padding(10.dp)) {
+    Image(
+        painter = painterResource("images/speed.png"),
+        contentDescription = Localization.trackCover.resource,
+        modifier = Modifier.width(40.dp).height(40.dp).align(Alignment.CenterVertically),
+        colorFilter = ColorFilter.tint(Params.secondaryAlternativeColor),
+        contentScale = ContentScale.Inside
+    )
+
+    Slider(
+        value = speedState.value,
+        valueRange = (0.5F..2F),
+        colors = SliderDefaults.colors(
+            thumbColor = Params.secondaryAlternativeColor,
+            activeTrackColor = Params.secondaryAlternativeColor,
+            inactiveTrackColor = Params.secondaryColor
+        ),
+        modifier = Modifier.width(150.dp),
+        onValueChange = {
+            speedState.value = it
+        },
+        onValueChangeFinished = { RustLibs.setSpeed(speedState.value) }
+    )
+
+    Text(
+        text = speedState.value.take(4),
+        fontSize = 14.sp,
+        color = Params.secondaryAlternativeColor
     )
 }

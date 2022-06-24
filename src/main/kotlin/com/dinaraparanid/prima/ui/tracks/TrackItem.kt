@@ -45,7 +45,8 @@ fun LazyItemScope.TrackItem(
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
     tracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>
+    isPlaybackTrackDraggingState: State<Boolean>,
+    speedState: State<Float>
 ) {
     val track = tracks[index]
     val coroutineScope = rememberCoroutineScope()
@@ -94,7 +95,8 @@ fun LazyItemScope.TrackItem(
                         playbackPositionState,
                         loopingState,
                         tracksState,
-                        isPlaybackTrackDraggingState
+                        isPlaybackTrackDraggingState,
+                        speedState
                     )
 
                     else -> cancelPlaybackControlTasks()

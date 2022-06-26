@@ -51,4 +51,20 @@ object Localization {
         be = "Трэкі",
         zh = "音乐曲目"
     )
+
+    @JvmField
+    val search = resource(
+        en = "Search",
+        ru = "Поиск",
+        be = "Пошук",
+        zh = "搜索"
+    )
+
+    @JvmField
+    val cancel = resource(
+        en = "Cancel",
+        ru = "Отмена",
+        be = "Адмена",
+        zh = "取消"
+    )
 }

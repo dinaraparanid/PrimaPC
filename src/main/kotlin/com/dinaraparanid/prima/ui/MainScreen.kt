@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
 import com.dinaraparanid.prima.ui.tracks.Tracks
+import com.dinaraparanid.prima.ui.tracks.appbar.TracksAppBar
 import com.dinaraparanid.prima.utils.Params
 import kotlinx.coroutines.*
 
@@ -41,7 +42,6 @@ fun MainScreen() {
         )
     ) {
         val isPlayingState = remember { mutableStateOf(false) }
-        val tracksState = remember { mutableStateListOf<Track>() }
         val currentTrackState = remember { mutableStateOf(RustLibs.getCurTrack()) }
         val isPlayingCoverLoadedState = remember { mutableStateOf(false) }
         val isPlaybackTrackDraggingState = remember { mutableStateOf(false) }
@@ -50,10 +50,13 @@ fun MainScreen() {
         val speedState = remember { mutableStateOf(RustLibs.getSpeed()) }
         val volumeState = remember { mutableStateOf(RustLibs.getVolume()) }
 
+        val tracksState = remember { mutableStateListOf<Track>() }
+        val filteredTracksState = remember { mutableStateListOf<Track>() }
+
         Surface(color = secondary, modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
-                    topBar = { AppBar() },
+                    topBar = { TracksAppBar(tracksState, filteredTracksState) },
                     bottomBar = {
                         PlayingBar(
                             tracksState,
@@ -77,6 +80,7 @@ fun MainScreen() {
                         playbackPositionState,
                         loopingState,
                         tracksState,
+                        filteredTracksState,
                         isPlaybackTrackDraggingState,
                         speedState
                     )

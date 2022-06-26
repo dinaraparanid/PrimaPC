@@ -467,7 +467,12 @@ private fun Volume(volumeState: MutableState<Float>) = Row(modifier = Modifier.p
         onValueChangeFinished = { RustLibs.setVolume(volumeState.value) }
     )
 
-    Text(text = volumeState.value.take(4), fontSize = 14.sp, color = Params.secondaryAlternativeColor)
+    Text(
+        text = volumeState.value.take(4),
+        fontSize = 14.sp,
+        color = Params.secondaryAlternativeColor,
+        modifier = Modifier.align(Alignment.CenterVertically)
+    )
 }
 
 @Composable
@@ -498,6 +503,7 @@ private fun Speed(speedState: MutableState<Float>) = Row(modifier = Modifier.pad
     Text(
         text = speedState.value.take(4),
         fontSize = 14.sp,
-        color = Params.secondaryAlternativeColor
+        color = Params.secondaryAlternativeColor,
+        modifier = Modifier.align(Alignment.CenterVertically)
     )
 }

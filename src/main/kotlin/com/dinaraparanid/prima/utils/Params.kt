@@ -6,6 +6,20 @@ import com.dinaraparanid.prima.utils.localization.Localization
 object Params {
     enum class Language { EN, RU, BE, ZH }
 
+    enum class Screens {
+        TRACKS,
+        PLAYLISTS,
+        ARTISTS,
+        FAVOURITES,
+        MP3_CONVERTER,
+        GTM,
+        STATISTICS,
+        SETTINGS,
+        ABOUT_APP
+    }
+
+    enum class TracksSearchOrder { TITLE, ARTIST, ALBUM, ALL }
+
     @JvmField
     val language = Language.EN // TODO: Load lang
 
@@ -16,5 +30,11 @@ object Params {
     val secondaryAlternativeColor = if (theme.isNight) Color.White else Color(22, 21, 25)
 
     @JvmField
-    val mainLabel = Localization.tracks // TODO: Load main label
+    val mainLabel = Localization.tracks.resource // TODO: Load main label
+
+    @JvmField
+    val currentScreen = Screens.TRACKS // TODO: Load cur screen
+
+    @JvmField
+    val tracksSearchOrder = TracksSearchOrder.ALL // TODO: Load search order
 }

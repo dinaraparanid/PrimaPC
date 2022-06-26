@@ -22,6 +22,7 @@ fun Tracks(
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
     tracksState: SnapshotStateList<Track>,
+    filteredTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>
 ) {
@@ -31,14 +32,21 @@ fun Tracks(
     }
 
     coroutineScope.launch {
-        tracksState.clear()
-        tracksState.addAll(tracksTask.await())
+        tracksState.run {
+            clear()
+            addAll(tracksTask.await())
+        }
+
+        filteredTracksState.run {
+            clear()
+            addAll(tracksState)
+        }
     }
 
     val listState = rememberLazyListState()
 
     Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
-        TracksBar(tracksState, listState)
+        TracksBar(filteredTracksState, listState)
 
         LazyColumn(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
@@ -46,9 +54,9 @@ fun Tracks(
             verticalArrangement = Arrangement.spacedBy(15.dp),
             state = listState
         ) {
-            itemsIndexed(tracksState, key = { _, track -> track }) { ind, _ ->
+            itemsIndexed(filteredTracksState, key = { _, track -> track }) { ind, _ ->
                 TrackItem(
-                    tracksState,
+                    filteredTracksState,
                     ind,
                     currentTrackState,
                     isPlayingState,

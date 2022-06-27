@@ -4,14 +4,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dinaraparanid.prima.entities.Track
-import com.dinaraparanid.prima.rust.RustLibs
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 @Composable
@@ -27,21 +27,7 @@ fun Tracks(
     speedState: State<Float>
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val tracksTask = coroutineScope.async(Dispatchers.IO) {
-        RustLibs.getAllTracksAsync()
-    }
-
-    coroutineScope.launch {
-        tracksState.run {
-            clear()
-            addAll(tracksTask.await())
-        }
-
-        filteredTracksState.run {
-            clear()
-            addAll(tracksState)
-        }
-    }
+    coroutineScope.launch { scanTracks(tracksState, filteredTracksState) }
 
     val listState = rememberLazyListState()
 

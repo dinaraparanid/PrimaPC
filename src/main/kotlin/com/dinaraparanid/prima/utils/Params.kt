@@ -18,7 +18,7 @@ object Params {
         ABOUT_APP
     }
 
-    enum class TracksSearchOrder { TITLE, ARTIST, ALBUM, ALL }
+    enum class TracksSearchOrder { TITLE, ARTIST, ALBUM }
 
     @JvmField
     val language = Language.EN // TODO: Load lang
@@ -36,5 +36,9 @@ object Params {
     val currentScreen = Screens.TRACKS // TODO: Load cur screen
 
     @JvmField
-    val tracksSearchOrder = TracksSearchOrder.ALL // TODO: Load search order
+    val tracksSearchOrder = arrayOf(
+        TracksSearchOrder.TITLE,
+        TracksSearchOrder.ARTIST,
+        TracksSearchOrder.ALBUM
+    ) // TODO: Load search order
 }

@@ -21,8 +21,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dinaraparanid.prima.entities.Track
+import com.dinaraparanid.prima.ui.tracks.scanTracks
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.localization.Localization
+import kotlinx.coroutines.launch
 
 @Composable
 fun TracksAppBar(tracksState: SnapshotStateList<Track>, filteredTracksState: SnapshotStateList<Track>) {
@@ -39,23 +41,21 @@ fun TracksAppBar(tracksState: SnapshotStateList<Track>, filteredTracksState: Sna
                 filteredTracksState.run {
                     clear()
                     addAll(tracksState.filter {
-                        when (Params.tracksSearchOrder) {
-                            Params.TracksSearchOrder.TITLE -> it.title?.lowercase()?.contains(query) == true
+                        val ord = Params.tracksSearchOrder
 
-                            Params.TracksSearchOrder.ARTIST -> it.artist?.lowercase()?.contains(query) == true
+                        if (Params.TracksSearchOrder.TITLE in ord && it.title?.lowercase()?.contains(query) == true)
+                            return@filter true
 
-                            Params.TracksSearchOrder.ALBUM -> it.album?.lowercase()?.contains(query) == true
+                        if (Params.TracksSearchOrder.ARTIST in ord && it.artist?.lowercase()?.contains(query) == true)
+                            return@filter true
 
-                            Params.TracksSearchOrder.ALL -> it.title?.lowercase()?.contains(query) == true
-                                    || it.artist?.lowercase()?.contains(query) == true
-                                    || it.album?.lowercase()?.contains(query) == true
-                        }
+                        Params.TracksSearchOrder.ALBUM in ord && it.album?.lowercase()?.contains(query) == true
                     })
                 }
             },
         )
 
-        else -> DefaultAppBar(isSearchingState)
+        else -> DefaultAppBar(isSearchingState, tracksState, filteredTracksState)
     }
 }
 
@@ -70,7 +70,7 @@ private fun SearchAppBar(
     elevation = 10.dp
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth().height(60.dp),
+        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
         color = MaterialTheme.colors.primary
     ) {
         val textState = remember { mutableStateOf("") }
@@ -78,7 +78,13 @@ private fun SearchAppBar(
         TextField(
             modifier = Modifier.fillMaxSize(),
             value = textState.value,
-            onValueChange = { onTextChanged(it) },
+            onValueChange = {
+                textState.value = it
+                onTextChanged(it)
+            },
+            placeholder = {
+                Text(text = "...", color = Params.secondaryAlternativeColor.copy(alpha = ContentAlpha.medium))
+            },
             singleLine = true,
             leadingIcon = {
                 Icon(
@@ -127,17 +133,21 @@ private fun SearchAppBar(
 }
 
 @Composable
-private fun DefaultAppBar(isSearchingState: MutableState<Boolean>) = TopAppBar(
+private fun DefaultAppBar(
+    isSearchingState: MutableState<Boolean>,
+    tracksState: SnapshotStateList<Track>,
+    filteredTracksState: SnapshotStateList<Track>
+) = TopAppBar(
     modifier = Modifier.fillMaxWidth().height(60.dp),
     elevation = 10.dp
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth().height(60.dp),
+        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
         shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
         color = Params.primaryColor,
         elevation = 10.dp
     ) {
-        Row(modifier = Modifier.fillMaxWidth().height(60.dp)) {
+        Row(modifier = Modifier.fillMaxSize()) {
             Spacer(modifier = Modifier.width(5.dp).fillMaxHeight())
 
             Button(
@@ -168,16 +178,44 @@ private fun DefaultAppBar(isSearchingState: MutableState<Boolean>) = TopAppBar(
 
             Spacer(modifier = Modifier.weight(1F))
 
-            IconButton(
-                modifier = Modifier.align(Alignment.CenterVertically),
-                onClick = { isSearchingState.value = true }
-            ) {
-                Icon(
-                    modifier = Modifier.alpha(ContentAlpha.medium).width(30.dp).height(30.dp),
-                    painter = painterResource("images/search_icon.png"),
-                    contentDescription = Localization.search.resource,
-                    tint = Params.secondaryAlternativeColor
-                )
+            Row(modifier = Modifier.align(Alignment.CenterVertically)) {
+                val coroutineScope = rememberCoroutineScope()
+
+                IconButton(
+                    modifier = Modifier.align(Alignment.CenterVertically),
+                    onClick = { isSearchingState.value = true }
+                ) {
+                    Icon(
+                        modifier = Modifier.alpha(ContentAlpha.medium).width(30.dp).height(30.dp),
+                        painter = painterResource("images/search_icon.png"),
+                        contentDescription = Localization.search.resource,
+                        tint = Params.secondaryAlternativeColor
+                    )
+                }
+
+                IconButton(
+                    modifier = Modifier.align(Alignment.CenterVertically),
+                    onClick = { isSearchingState.value = true }
+                ) {
+                    Icon(
+                        modifier = Modifier.alpha(ContentAlpha.medium).width(30.dp).height(30.dp),
+                        painter = painterResource("images/param.png"),
+                        contentDescription = Localization.search.resource,
+                        tint = Params.secondaryAlternativeColor
+                    )
+                }
+
+                IconButton(
+                    modifier = Modifier.align(Alignment.CenterVertically),
+                    onClick = { coroutineScope.launch { scanTracks(tracksState, filteredTracksState) } }
+                ) {
+                    Icon(
+                        modifier = Modifier.alpha(ContentAlpha.medium).width(30.dp).height(30.dp),
+                        painter = painterResource("images/scanner_icon.png"),
+                        contentDescription = Localization.search.resource,
+                        tint = Params.secondaryAlternativeColor
+                    )
+                }
             }
         }
     }

@@ -193,9 +193,11 @@ private fun DefaultAppBar(
                     )
                 }
 
+                val isPopupMenuExpandedState = remember { mutableStateOf(false) }
+
                 IconButton(
                     modifier = Modifier.align(Alignment.CenterVertically),
-                    onClick = { isSearchingState.value = true }
+                    onClick = { isPopupMenuExpandedState.value = true }
                 ) {
                     Icon(
                         modifier = Modifier.alpha(ContentAlpha.medium).width(30.dp).height(30.dp),
@@ -204,6 +206,8 @@ private fun DefaultAppBar(
                         tint = Params.secondaryAlternativeColor
                     )
                 }
+
+                SearchByParamsMenu(isPopupMenuExpandedState)
 
                 IconButton(
                     modifier = Modifier.align(Alignment.CenterVertically),
@@ -218,5 +222,43 @@ private fun DefaultAppBar(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SearchByParamsMenu(isPopupMenuExpandedState: MutableState<Boolean>) = DropdownMenu(
+    expanded = isPopupMenuExpandedState.value,
+    onDismissRequest = { isPopupMenuExpandedState.value = false }
+) {
+    SearchByParamsMenuItem(Params.TracksSearchOrder.TITLE, Localization.byTitle.resource)
+    SearchByParamsMenuItem(Params.TracksSearchOrder.ARTIST, Localization.byArtist.resource)
+    SearchByParamsMenuItem(Params.TracksSearchOrder.ALBUM, Localization.byAlbum.resource)
+}
+
+@Composable
+private fun SearchByParamsMenuItem(order: Params.TracksSearchOrder, title: String) {
+    val isCheckedState = remember { mutableStateOf(order in Params.tracksSearchOrder) }
+
+    DropdownMenuItem(
+        onClick = {
+            Params.updateTrackSearchOrder(order)
+            isCheckedState.value = !isCheckedState.value
+        }
+    ) {
+        Checkbox(
+            checked = isCheckedState.value,
+            onCheckedChange = {
+                Params.updateTrackSearchOrder(order)
+                isCheckedState.value = !isCheckedState.value
+            },
+            colors = CheckboxDefaults.colors(
+                checkedColor = Params.primaryColor,
+                checkmarkColor = Params.secondaryColor,
+                uncheckedColor = Params.secondaryAlternativeColor,
+                disabledColor = Params.secondaryAlternativeColor
+            )
+        )
+
+        Text(text = title, fontSize = 14.sp, color = Params.secondaryAlternativeColor)
     }
 }

@@ -67,4 +67,28 @@ object Localization {
         be = "Адмена",
         zh = "取消"
     )
+
+    @JvmField
+    val byTitle = resource(
+        en = "By title",
+        ru = "По названию",
+        be = "Па назве",
+        zh = "按标题分类"
+    )
+
+    @JvmField
+    val byArtist = resource(
+        en = "By artist",
+        ru = "По артисту",
+        be = "Па артысту",
+        zh = "艺术家"
+    )
+
+    @JvmField
+    val byAlbum = resource(
+        en = "By album",
+        ru = "По альбому",
+        be = "Па альбоме",
+        zh = "按专辑分类"
+    )
 }

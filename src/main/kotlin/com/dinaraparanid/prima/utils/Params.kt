@@ -36,9 +36,15 @@ object Params {
     val currentScreen = Screens.TRACKS // TODO: Load cur screen
 
     @JvmField
-    val tracksSearchOrder = arrayOf(
+    val tracksSearchOrder = hashSetOf(
         TracksSearchOrder.TITLE,
         TracksSearchOrder.ARTIST,
         TracksSearchOrder.ALBUM
     ) // TODO: Load search order
+
+    @JvmStatic
+    fun updateTrackSearchOrder(order: TracksSearchOrder) = when (order) {
+        in tracksSearchOrder -> tracksSearchOrder.remove(order)
+        else -> tracksSearchOrder.add(order)
+    }
 }

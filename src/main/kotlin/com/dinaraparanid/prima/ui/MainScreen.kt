@@ -1,8 +1,7 @@
 package com.dinaraparanid.prima.ui
 
 import androidx.compose.desktop.ui.tooling.preview.Preview
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.Colors
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
@@ -11,10 +10,14 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
-import com.dinaraparanid.prima.ui.tracks.Tracks
 import com.dinaraparanid.prima.ui.tracks.appbar.TracksAppBar
+import com.dinaraparanid.prima.ui.utils.navigation.RootScreen
+import com.dinaraparanid.prima.ui.utils.navigation.RootView
 import com.dinaraparanid.prima.utils.Params
 import kotlinx.coroutines.*
 
@@ -53,10 +56,25 @@ fun MainScreen() {
         val tracksState = remember { mutableStateListOf<Track>() }
         val filteredTracksState = remember { mutableStateListOf<Track>() }
 
+        val rootScreen = RootScreen(DefaultComponentContext(LifecycleRegistry())).apply { start() }
+
         Surface(color = secondary, modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
-                    topBar = { TracksAppBar(tracksState, filteredTracksState) },
+                    topBar = {
+                        // TODO: other app bars
+                        when (rootScreen.currentConfigState.value) {
+                            RootScreen.Config.Tracks -> TracksAppBar(tracksState, filteredTracksState)
+                            RootScreen.Config.TrackCollections -> Unit
+                            RootScreen.Config.Artists -> Unit
+                            RootScreen.Config.Favourites -> Unit
+                            RootScreen.Config.MP3Converter -> Unit
+                            RootScreen.Config.GTM -> Unit
+                            RootScreen.Config.Statistics -> Unit
+                            RootScreen.Config.Settings -> Unit
+                            RootScreen.Config.AboutApp -> Unit
+                        }
+                    },
                     bottomBar = {
                         PlayingBar(
                             tracksState,
@@ -71,19 +89,24 @@ fun MainScreen() {
                         )
                     }
                 ) {
-                    // TODO: Load first screen
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        NavigationMenu(rootScreen)
 
-                    Tracks(
-                        currentTrackState,
-                        isPlayingState,
-                        isPlayingCoverLoadedState,
-                        playbackPositionState,
-                        loopingState,
-                        tracksState,
-                        filteredTracksState,
-                        isPlaybackTrackDraggingState,
-                        speedState
-                    )
+                        Surface(modifier = Modifier.fillMaxHeight().width(3.dp), color = Params.primaryColor) {}
+
+                        RootView(
+                            rootScreen,
+                            currentTrackState,
+                            isPlayingState,
+                            isPlayingCoverLoadedState,
+                            playbackPositionState,
+                            loopingState,
+                            tracksState,
+                            filteredTracksState,
+                            isPlaybackTrackDraggingState,
+                            speedState
+                        )
+                    }
                 }
             }
         }

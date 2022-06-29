@@ -91,4 +91,76 @@ object Localization {
         be = "Па альбоме",
         zh = "按专辑分类"
     )
+
+    @JvmField
+    val artists = resource(
+        en = "Artists",
+        ru = "Артисты",
+        be = "Артысты",
+        zh = "艺术家"
+    )
+
+    @JvmField
+    val trackCollections = resource(
+        en = "Track Collections",
+        ru = "Сборники Треков",
+        be = "Зборнікі Трэкаў",
+        zh = "曲目集合"
+    )
+
+    @JvmField
+    val favourites = resource(
+        en = "Favourites",
+        ru = "Любимое",
+        be = "Любімы",
+        zh = "最喜欢的"
+    )
+
+    @JvmField
+    val mp3Converter = resource(
+        en = "MP3 Converter",
+        ru = "MP3 Конвертер",
+        be = "MP3 Канвэртар",
+        zh = "MP3转换器"
+    )
+
+    @JvmField
+    val gtm = resource(
+        en = "Guess The Melody",
+        ru = "Угадай Мелодию",
+        be = "Угадай Мелодыю",
+        zh = "猜旋律"
+    )
+
+    @JvmField
+    val statistics = resource(
+        en = "Statistics",
+        ru = "Статистика",
+        be = "Статыстыка",
+        zh = "统计数字"
+    )
+
+    @JvmField
+    val settings = resource(
+        en = "Settings",
+        ru = "Настройки",
+        be = "Наладжваньне",
+        zh = "参数"
+    )
+
+    @JvmField
+    val aboutApp = resource(
+        en = "About App",
+        ru = "О Приложении",
+        be = "Аб Дадатку",
+        zh = "关于应用程序"
+    )
+
+    @JvmField
+    val todo = resource(
+        en = "Not yet implemented",
+        ru = "Еще не реализовано",
+        be = "Яшчэ не рэалізавана",
+        zh = "尚未实施"
+    )
 }

@@ -1,6 +1,5 @@
 package com.dinaraparanid.prima.ui.tracks.appbar
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -14,8 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -148,30 +145,11 @@ private fun DefaultAppBar(
         elevation = 10.dp
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
-            Spacer(modifier = Modifier.width(5.dp).fillMaxHeight())
-
-            Button(
-                onClick = {
-                    // TODO: Show menu
-                },
-                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
-                elevation = null,
-                modifier = Modifier.width(50.dp).height(50.dp).align(Alignment.CenterVertically),
-            ) {
-                Image(
-                    painter = painterResource("images/burger_button_icon.png"),
-                    contentDescription = Localization.trackCover.resource,
-                    modifier = Modifier.fillMaxSize(),
-                    colorFilter = ColorFilter.tint(Params.secondaryAlternativeColor),
-                    contentScale = ContentScale.Inside
-                )
-            }
-
-            Spacer(modifier = Modifier.width(20.dp).fillMaxHeight())
+            Spacer(modifier = Modifier.width(40.dp).fillMaxHeight())
 
             Text(
                 text = Params.mainLabel,
-                fontSize = 20.sp,
+                fontSize = 22.sp,
                 color = Params.secondaryAlternativeColor,
                 modifier = Modifier.align(Alignment.CenterVertically)
             )

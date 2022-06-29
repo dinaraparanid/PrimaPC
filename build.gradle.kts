@@ -26,6 +26,8 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(group = "net.jthink", name = "jaudiotagger", version = "3.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.2")
+    implementation("com.arkivanov.decompose:decompose:0.7.0")
+    implementation("com.arkivanov.decompose:extensions-compose-jetbrains:0.7.0")
 }
 
 tasks.withType<KotlinCompile> {

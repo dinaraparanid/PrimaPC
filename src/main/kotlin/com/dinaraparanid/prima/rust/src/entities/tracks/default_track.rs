@@ -1,9 +1,22 @@
 extern crate chrono;
 extern crate jni;
 
-use crate::{entities::tracks::track_trait::TrackTrait, utils::wrappers::jtrack::JTrack};
+use jni::{
+    objects::{JObject, JValue},
+    signature::JavaType,
+    sys::{jbyte, jshort},
+    JNIEnv,
+};
+
+use crate::{
+    entities::tracks::track_trait::TrackTrait,
+    utils::{
+        extensions::{jni_env_ext::JNIEnvExt, jobject_ext::JObjectExt},
+        wrappers::jtrack::JTrack,
+    },
+};
+
 use chrono::{DateTime, Duration, Local};
-use jni::sys::{jbyte, jshort};
 use std::path::PathBuf;
 
 #[derive(Clone, Debug)]
@@ -109,6 +122,28 @@ impl DefaultTrack {
             self.duration,
             self.add_date,
             self.number_in_album,
+        )
+    }
+
+    #[inline]
+    pub fn from_path(jni_env: &JNIEnv, path: String) -> Option<Self> {
+        JObjectExt::array_to_track(
+            &unsafe {
+                JNIEnvExt::call_static_method(
+                    jni_env,
+                    "com/dinaraparanid/prima/rust/RustLibs",
+                    "getDataByPath",
+                    "(Ljava/lang/String;)[Ljava/lang/Object;",
+                    JavaType::Array(Box::new(JavaType::Object(String::from("java/lang/Object")))),
+                    &[JValue::Object(JObject::from(
+                        jni_env.new_string(path.clone()).unwrap(),
+                    ))],
+                )
+            }
+            .l()
+            .unwrap(),
+            jni_env,
+            PathBuf::from(path),
         )
     }
 }

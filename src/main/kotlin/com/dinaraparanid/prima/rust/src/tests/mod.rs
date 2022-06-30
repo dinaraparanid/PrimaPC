@@ -1,14 +1,16 @@
-extern crate futures;
-
-use futures::{
-    executor::ThreadPool,
-    task::{Spawn, SpawnExt},
-};
-
-use std::sync::{Arc, Mutex};
+use crate::TrackOrder;
 
 #[test]
 fn multithreading_async_test() {
+    extern crate futures;
+
+    use futures::{
+        executor::ThreadPool,
+        task::{Spawn, SpawnExt},
+    };
+
+    use std::sync::{Arc, Mutex};
+
     let vector = Arc::new(Mutex::new(Some(Vec::new())));
     let mut tasks = Vec::new();
     let pool1 = ThreadPool::new().unwrap();
@@ -49,28 +51,35 @@ fn multithreading_async_test() {
     });
 }
 
-/*#[test]
-fn scan_tracks_test() {
-    let program = Program::new();
+#[test]
+fn store_music_search_path_test() {
+    extern crate dirs2;
+    use crate::utils::storage_util::StorageUtil;
+    use dirs2::audio_dir;
 
-    futures::executor::block_on(async move {
-        assert_eq!(
-            *program
-                .instance
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .audio_scanner
-                .read()
-                .unwrap()
-                .as_ref()
-                .unwrap()
-                .get_all_tracks()
-                .await
-                .lock()
-                .unwrap(),
-            Vec::<DefaultTrack>::new()
-        )
-    })
-}*/
+    assert!(StorageUtil::store_music_search_path(audio_dir().unwrap()).is_ok())
+}
+
+#[test]
+fn load_music_search_path_test() {
+    extern crate dirs2;
+    use crate::utils::storage_util::StorageUtil;
+    use dirs2::audio_dir;
+
+    assert_eq!(
+        StorageUtil::load_music_search_path(),
+        Some(audio_dir().unwrap())
+    )
+}
+
+#[test]
+fn store_track_order_test() {
+    use crate::utils::storage_util::StorageUtil;
+    assert!(StorageUtil::store_track_order(TrackOrder::default()).is_ok())
+}
+
+#[test]
+fn load_track_order_test() {
+    use crate::utils::storage_util::StorageUtil;
+    assert_eq!(StorageUtil::load_track_order(), TrackOrder::default())
+}

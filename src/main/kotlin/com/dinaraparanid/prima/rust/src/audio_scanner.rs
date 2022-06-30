@@ -5,7 +5,7 @@ extern crate once_cell;
 use crate::{
     entities::tracks::default_track::DefaultTrack,
     utils::{
-        extensions::{jni_env_ext::JNIEnvExt, jobject_ext::JObjectExt, string_ext::StringExt},
+        extensions::string_ext::StringExt,
         params::PARAMS,
         track_order::{Comparator, Ord},
     },
@@ -16,11 +16,6 @@ use std::{
     fs,
     path::Path,
     sync::{Arc, Mutex, RwLock},
-};
-
-use jni::{
-    objects::{JObject, JValue},
-    signature::JavaType,
 };
 
 use async_recursion::async_recursion;
@@ -69,39 +64,51 @@ impl AudioScanner {
             let track_order = unsafe { PARAMS.read().unwrap().as_ref().unwrap().track_order };
 
             tracks.sort_by(|f, s| match track_order.comparator {
-                Comparator::TITLE => match track_order.order {
-                    Ord::ASC => String::from_jbyte_vec(f.get_title().unwrap().clone())
+                Comparator::Title => match track_order.order {
+                    Ord::Asc => String::from_jbyte_vec(f.get_title().unwrap().clone())
                         .partial_cmp(&String::from_jbyte_vec(s.get_title().unwrap().clone()))
                         .unwrap(),
 
-                    Ord::DESC => String::from_jbyte_vec(s.get_title().unwrap().clone())
+                    Ord::Desc => String::from_jbyte_vec(s.get_title().unwrap().clone())
                         .partial_cmp(&String::from_jbyte_vec(f.get_title().unwrap().clone()))
                         .unwrap(),
                 },
 
-                Comparator::ARTIST => match track_order.order {
-                    Ord::ASC => String::from_jbyte_vec(f.get_artist().unwrap().clone())
+                Comparator::Artist => match track_order.order {
+                    Ord::Asc => String::from_jbyte_vec(f.get_artist().unwrap().clone())
                         .partial_cmp(&String::from_jbyte_vec(s.get_artist().unwrap().clone()))
                         .unwrap(),
 
-                    Ord::DESC => String::from_jbyte_vec(s.get_artist().unwrap().clone())
+                    Ord::Desc => String::from_jbyte_vec(s.get_artist().unwrap().clone())
                         .partial_cmp(&String::from_jbyte_vec(f.get_artist().unwrap().clone()))
                         .unwrap(),
                 },
 
-                Comparator::ALBUM => match track_order.order {
-                    Ord::ASC => String::from_jbyte_vec(f.get_album().unwrap().clone())
+                Comparator::Album => match track_order.order {
+                    Ord::Asc => String::from_jbyte_vec(f.get_album().unwrap().clone())
                         .partial_cmp(&String::from_jbyte_vec(s.get_album().unwrap().clone()))
                         .unwrap(),
 
-                    Ord::DESC => String::from_jbyte_vec(s.get_album().unwrap().clone())
+                    Ord::Desc => String::from_jbyte_vec(s.get_album().unwrap().clone())
                         .partial_cmp(&String::from_jbyte_vec(f.get_album().unwrap().clone()))
                         .unwrap(),
                 },
 
-                Comparator::DATE => match track_order.order {
-                    Ord::ASC => f.get_add_date().partial_cmp(s.get_add_date()).unwrap(),
-                    Ord::DESC => s.get_add_date().partial_cmp(f.get_add_date()).unwrap(),
+                Comparator::Date => match track_order.order {
+                    Ord::Asc => f.get_add_date().partial_cmp(s.get_add_date()).unwrap(),
+                    Ord::Desc => s.get_add_date().partial_cmp(f.get_add_date()).unwrap(),
+                },
+
+                Comparator::NumberInAlbum => match track_order.order {
+                    Ord::Asc => f
+                        .get_number_in_album()
+                        .partial_cmp(&s.get_number_in_album())
+                        .unwrap(),
+
+                    Ord::Desc => s
+                        .get_number_in_album()
+                        .partial_cmp(&f.get_number_in_album())
+                        .unwrap(),
                 },
             })
         }
@@ -114,27 +121,7 @@ impl AudioScanner {
         let jni_env = unsafe { &JVM.read().unwrap().jni_env }.clone();
         let jvm = jni_env.unwrap().get_java_vm().unwrap();
         let jni_env = jvm.attach_current_thread_permanently().unwrap();
-
-        let file_name = jni_env
-            .new_string(file.to_string_lossy().to_string())
-            .unwrap();
-
-        JObjectExt::array_to_track(
-            &unsafe {
-                JNIEnvExt::call_static_method(
-                    &jni_env,
-                    "com/dinaraparanid/prima/rust/RustLibs",
-                    "getDataByPath",
-                    "(Ljava/lang/String;)[Ljava/lang/Object;",
-                    JavaType::Array(Box::new(JavaType::Object(String::from("java/lang/Object")))),
-                    &[JValue::Object(JObject::from(file_name))],
-                )
-            }
-            .l()
-            .unwrap(),
-            &jni_env,
-            file.to_path_buf(),
-        )
+        DefaultTrack::from_path(&jni_env, file.to_string_lossy().to_string())
     }
 
     #[async_recursion]

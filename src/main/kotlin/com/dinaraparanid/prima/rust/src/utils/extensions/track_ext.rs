@@ -1,6 +1,7 @@
 extern crate jni;
+extern crate yaml_rust;
 
-use crate::TrackTrait;
+use crate::{utils::extensions::path_buf_ext::PathBufExt, TrackTrait};
 
 use jni::{
     objects::{JObject, JValue},
@@ -8,8 +9,11 @@ use jni::{
     JNIEnv,
 };
 
+use yaml_rust::Yaml;
+
 pub trait TrackExt: TrackTrait {
     fn to_java_track<'a>(&self, env: &'a JNIEnv<'a>) -> JObject<'a>;
+    fn into_yaml(self) -> Yaml;
 }
 
 impl<T: TrackTrait> TrackExt for T {
@@ -85,5 +89,10 @@ impl<T: TrackTrait> TrackExt for T {
             ],
         )
         .unwrap()
+    }
+
+    #[inline]
+    fn into_yaml(self) -> Yaml {
+        Yaml::String(self.get_path().to_string())
     }
 }

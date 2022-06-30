@@ -1,6 +1,4 @@
-
-# Created by https://www.toptal.com/developers/gitignore/api/rust,kotlin,java
-# Edit at https://www.toptal.com/developers/gitignore?templates=rust,kotlin,java
+data.yaml
 
 ### Java ###
 # Compiled class file

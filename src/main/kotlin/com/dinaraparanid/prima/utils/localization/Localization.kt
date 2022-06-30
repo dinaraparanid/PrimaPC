@@ -93,6 +93,22 @@ object Localization {
     )
 
     @JvmField
+    val byDate = resource(
+        en = "By date",
+        ru = "По дате",
+        be = "Па даце",
+        zh = "按日期计算"
+    )
+
+    @JvmField
+    val byNumberInAlbum = resource(
+        en = "By № in album",
+        ru = "По № в альбоме",
+        be = "Па № ў альбоме",
+        zh = "在专辑中"
+    )
+
+    @JvmField
     val artists = resource(
         en = "Artists",
         ru = "Артисты",
@@ -162,5 +178,29 @@ object Localization {
         ru = "Еще не реализовано",
         be = "Яшчэ не рэалізавана",
         zh = "尚未实施"
+    )
+
+    @JvmField
+    val ascending = resource(
+        en = "ascending",
+        ru = "по возрастанию",
+        be = "па ўзрастанні",
+        zh = "上升"
+    )
+
+    @JvmField
+    val descending = resource(
+        en = "descending",
+        ru = "по убыванию",
+        be = "па змяншэнні",
+        zh = "降序排列"
+    )
+
+    @JvmField
+    val trackOrder = resource(
+        en = "Tracks' order",
+        ru = "Порядок треков",
+        be = "Парадак трэкаў",
+        zh = "追踪订单"
     )
 }

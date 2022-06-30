@@ -67,12 +67,30 @@ public enum RustLibs {;
 
     public static final native int getLoopingState();
 
+    /**
+     * Gets track order's comparator and order as [int; 2]
+     * @return 0 -> comparator (number in [0..4]); 1 -> order (number in [5..6])
+     */
+
+    @NotNull
+    public static final native int[] getTrackOrder();
+
+    /**
+     * Updates track ordering
+     * @param comparator compare by: 0 - title, 1 - artist, 2 - album, 3 - date, 4 - № in album
+     * @param order compare by: 0 - asc, 1 - desc
+     */
+
+    public static final native void setTrackOrder(final int comparator, final int order);
+
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;
     }
+
     public static final long toLongPrimitive(@NotNull final Long l) {
         return l;
     }
+
     public static final short toShortPrimitive(@NotNull final Short s) {
         return s;
     }
@@ -90,14 +108,13 @@ public enum RustLibs {;
             }
 
             return new Object[]{
-                    tag.getFirst(FieldKey.TITLE).getBytes(StandardCharsets.UTF_16),
-                    tag.getFirst(FieldKey.ARTIST).getBytes(StandardCharsets.UTF_16),
-                    tag.getFirst(FieldKey.ALBUM).getBytes(StandardCharsets.UTF_16),
+                    tag.getFirst(FieldKey.TITLE).getBytes(StandardCharsets.UTF_8),
+                    tag.getFirst(FieldKey.ARTIST).getBytes(StandardCharsets.UTF_8),
+                    tag.getFirst(FieldKey.ALBUM).getBytes(StandardCharsets.UTF_8),
                     (long) file.getAudioHeader().getTrackLength() * 1000L,
                     numberInAlbum
             };
         } catch (final Exception e) {
-            e.printStackTrace();
             return null;
         }
     }

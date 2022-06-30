@@ -54,7 +54,11 @@ fun LazyItemScope.TrackItem(
     val coverState = remember { mutableStateOf(ImageBitmap(0, 0)) }
 
     val coverTask = coroutineScope.async(Dispatchers.IO) {
-        AudioFileIO.read(File(track.path.correctUTF8)).tagOrCreateAndSetDefault?.firstArtwork?.binaryData
+        try {
+            AudioFileIO.read(File(track.path.correctUTF8)).tagOrCreateAndSetDefault?.firstArtwork?.binaryData
+        } catch (e: Exception) {
+            null
+        }
     }
 
     coroutineScope.launch {

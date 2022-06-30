@@ -1,6 +1,11 @@
+extern crate yaml_rust;
+
+use yaml_rust::{yaml::Array, Yaml};
+
 use crate::{
     entities::playlists::{playlist_trait::PlaylistTrait, playlist_type::PlaylistType},
-    TrackTrait,
+    utils::extensions::track_ext::TrackExt,
+    DefaultTrack, TrackTrait, JVM,
 };
 
 pub struct DefaultPlaylist<T: TrackTrait> {
@@ -24,6 +29,15 @@ impl<Tr: TrackTrait> Extend<Tr> for DefaultPlaylist<Tr> {
     #[inline]
     fn extend<T: IntoIterator<Item = Tr>>(&mut self, iter: T) {
         self.push_all(iter)
+    }
+}
+
+impl<T: TrackTrait> From<DefaultPlaylist<T>> for Yaml {
+    #[inline]
+    fn from(playlist: DefaultPlaylist<T>) -> Self {
+        Yaml::Array(Array::from_iter(
+            playlist.into_iter().map(|t| TrackExt::into_yaml(t)),
+        ))
     }
 }
 
@@ -73,5 +87,18 @@ impl<T: TrackTrait> DefaultPlaylist<T> {
     #[inline]
     pub(in crate::entities::playlists) fn get_tracks_mut(&mut self) -> &mut Vec<T> {
         &mut self.tracks
+    }
+}
+
+impl DefaultPlaylist<DefaultTrack> {
+    #[inline]
+    pub fn from_yaml(playlist: &Array) -> Option<Self> {
+        let jni_env = unsafe { &JVM.read().unwrap().jni_env }.clone();
+        let jvm = jni_env.unwrap().get_java_vm().unwrap();
+        let jni_env = jvm.attach_current_thread_permanently().unwrap();
+
+        Some(DefaultPlaylist::from_iter(playlist.iter().filter_map(
+            |y| DefaultTrack::from_path(&jni_env, y.as_str()?.to_string()),
+        )))
     }
 }

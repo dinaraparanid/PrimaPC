@@ -32,7 +32,7 @@ fun Tracks(
     val listState = rememberLazyListState()
 
     Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
-        TracksBar(filteredTracksState, listState)
+        TracksBar(tracksState, filteredTracksState, listState)
 
         LazyColumn(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),

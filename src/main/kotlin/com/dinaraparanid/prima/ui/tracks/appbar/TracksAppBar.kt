@@ -68,7 +68,9 @@ private fun SearchAppBar(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-        color = MaterialTheme.colors.primary
+        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+        color = MaterialTheme.colors.primary,
+        elevation = 10.dp
     ) {
         val textState = remember { mutableStateOf("") }
 

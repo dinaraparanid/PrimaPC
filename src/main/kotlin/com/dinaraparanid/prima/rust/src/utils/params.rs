@@ -1,12 +1,11 @@
 extern crate dirs2;
 extern crate once_cell;
 
-use dirs2::audio_dir;
 use once_cell::sync::Lazy;
 
 use crate::{
     entities::{playlists::default_playlist::DefaultPlaylist, tracks::default_track::DefaultTrack},
-    utils::track_order::TrackOrder,
+    utils::{storage_util::StorageUtil, track_order::TrackOrder},
 };
 
 use std::{
@@ -28,9 +27,9 @@ impl Params {
     #[inline]
     pub fn new() -> Option<Self> {
         Some(Self {
-            music_search_path: audio_dir()?,          // TODO: Load search path
-            track_order: TrackOrder::default(),       // TODO: Load track order
-            cur_playlist: DefaultPlaylist::default(), // TODO: Load cur playlist
+            music_search_path: StorageUtil::load_music_search_path()?,
+            track_order: StorageUtil::load_track_order(),
+            cur_playlist: StorageUtil::load_current_playlist(),
         })
     }
 }

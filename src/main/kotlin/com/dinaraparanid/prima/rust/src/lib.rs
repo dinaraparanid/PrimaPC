@@ -24,7 +24,12 @@ use crate::{
         tracks::{default_track::DefaultTrack, track_trait::TrackTrait},
     },
     jvm::JVM,
-    utils::{extensions::track_ext::TrackExt, params::PARAMS, wrappers::jtrack::JTrack},
+    utils::{
+        extensions::track_ext::TrackExt,
+        params::PARAMS,
+        track_order::{Comparator, Ord, TrackOrder},
+        wrappers::jtrack::JTrack,
+    },
 };
 
 use jni::{
@@ -419,4 +424,36 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getLoopingStat
     _class: jclass,
 ) -> jint {
     unsafe { AUDIO_PLAYER.write().unwrap().get_looping_state().into() }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getTrackOrder(
+    env: JNIEnv,
+    _class: jclass,
+) -> jintArray {
+    let ord = unsafe {
+        let order = PARAMS.write().unwrap().as_mut().unwrap().track_order;
+        (order.comparator, order.order)
+    };
+
+    let arr = env.new_int_array(2).unwrap();
+    let order: jint = ord.1.into();
+    env.set_int_array_region(arr, 0, &[ord.0.into(), 5 + order])
+        .unwrap();
+    arr
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setTrackOrder(
+    _env: JNIEnv,
+    _class: jclass,
+    comparator: jint,
+    order: jint,
+) {
+    unsafe {
+        PARAMS.write().unwrap().as_mut().unwrap().track_order =
+            TrackOrder::new(Comparator::from(comparator), Ord::from(order - 5))
+    }
 }

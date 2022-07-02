@@ -23,12 +23,12 @@ public enum RustLibs {;
     public static final native String hello(@NotNull final String name);
 
     @NotNull
-    public static final native Track[] getAllTracksAsync();
+    public static final native Track[] getAllTracksBlocking();
 
     @Nullable
-    public static final native Track getCurTrack();
+    public static final native Track getCurTrackBlocking();
 
-    public static final native int getCurTrackIndex();
+    public static final native int getCurTrackIndexBlocking();
 
     /**
      * Calculates time in hh:mm:ss format
@@ -39,15 +39,15 @@ public enum RustLibs {;
     @NotNull
     public static final native int[] calcTrackTime(final int millis);
 
-    public static final native void onTrackClickedAsync(@NotNull final List<Track> tracks, final int trackIndex);
+    public static final native void onTrackClickedBlocking(@NotNull final List<Track> tracks, final int trackIndex);
 
-    public static final native void onPlayButtonClickedAsync();
+    public static final native void onPlayButtonClickedBlocking();
 
-    public static final native void onNextTrackClickedAsync();
+    public static final native void onNextTrackClickedBlocking();
 
-    public static final native void onPreviousTrackClickedAsync();
+    public static final native void onPreviousTrackClickedBlocking();
 
-    public static final native void replayCurrentTrackAsync();
+    public static final native void replayCurrentTrackBlocking();
 
     public static final native long getPlaybackPosition();
 
@@ -82,6 +82,12 @@ public enum RustLibs {;
      */
 
     public static final native void setTrackOrder(final int comparator, final int order);
+
+    public static final native void setMusicSearchPath(final String path);
+
+    public static final native void storeMusicSearchPath();
+
+    public static final native void storeTrackOrder();
 
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;

@@ -27,6 +27,7 @@ use crate::{
     utils::{
         extensions::track_ext::TrackExt,
         params::PARAMS,
+        storage_util::StorageUtil,
         track_order::{Comparator, Ord, TrackOrder},
         wrappers::jtrack::JTrack,
     },
@@ -66,7 +67,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_hello(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracksAsync(
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracksBlocking(
     env: JNIEnv,
     _class: jclass,
 ) -> jobjectArray {
@@ -98,7 +99,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracksAs
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrack(
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrackBlocking(
     env: JNIEnv,
     _class: jclass,
 ) -> jobject {
@@ -108,7 +109,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrack(
             .unwrap()
             .as_ref()
             .unwrap()
-            .cur_playlist
+            .get_cur_playlist()
             .get_cur_track()
     } {
         None => std::ptr::null_mut(),
@@ -126,7 +127,6 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrack(
 ///
 /// # Return
 /// jintArray[hh, mm, ss]
-
 #[no_mangle]
 #[allow(non_snake_case)]
 pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_calcTrackTime(
@@ -159,7 +159,7 @@ fn get_path_and_duration_of_cur_track() -> (PathBuf, Duration) {
         .unwrap()
         .as_ref()
         .unwrap()
-        .cur_playlist
+        .get_cur_playlist()
         .get_cur_track()
         .unwrap();
 
@@ -170,6 +170,21 @@ fn get_path_and_duration_of_cur_track() -> (PathBuf, Duration) {
 }
 
 #[inline]
+fn get_duration_of_cur_track() -> Duration {
+    let track = unsafe { &PARAMS.read() };
+    let track = track
+        .as_ref()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .get_cur_playlist()
+        .get_cur_track()
+        .unwrap();
+
+    track.get_duration().to_std().unwrap()
+}
+
+#[inline]
 fn has_cur_track() -> bool {
     let params = unsafe { &PARAMS.read() };
     params
@@ -177,7 +192,7 @@ fn has_cur_track() -> bool {
         .unwrap()
         .as_ref()
         .unwrap()
-        .cur_playlist
+        .get_cur_playlist()
         .get_cur_track()
         .is_some()
 }
@@ -206,7 +221,20 @@ fn play_pause_cur_track() {
         }
     } else {
         if unsafe { AUDIO_PLAYER.read().unwrap().get_cur_path().is_none() } {
-            block_on(unsafe { AUDIO_PLAYER.write().unwrap().play(path, duration) })
+            if unsafe {
+                PARAMS
+                    .read()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap()
+                    .get_cur_playlist()
+                    .get_cur_track()
+                    .is_none()
+            } {
+                block_on(unsafe { AUDIO_PLAYER.write().unwrap().play(path, duration) })
+            } else {
+                unsafe { AUDIO_PLAYER.write().unwrap().resume(duration) }
+            }
         } else {
             if {
                 unsafe {
@@ -218,7 +246,7 @@ fn play_pause_cur_track() {
                         .eq(&path)
                 }
             } {
-                unsafe { AUDIO_PLAYER.write().unwrap().resume() }
+                unsafe { AUDIO_PLAYER.write().unwrap().resume(duration) }
             } else {
                 block_on(unsafe { AUDIO_PLAYER.write().unwrap().play(path, duration) })
             }
@@ -228,13 +256,13 @@ fn play_pause_cur_track() {
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrackClickedAsync(
+pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrackClickedBlocking(
     env: JNIEnv,
     _class: jclass,
     tracks: JObject,
     track_index: jint,
 ) {
-    PARAMS.write().unwrap().as_mut().unwrap().cur_playlist = DefaultPlaylist::new(
+    let playlist = DefaultPlaylist::new(
         None,
         PlaylistType::default(),
         JList::from_env(&env, tracks)
@@ -245,12 +273,20 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrack
         track_index as usize,
     );
 
+    *PARAMS
+        .write()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .get_cur_playlist_mut() = playlist.clone();
+
+    StorageUtil::store_current_playlist(playlist).unwrap_or_default();
     play_pause_cur_track()
 }
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPlayButtonClickedAsync(
+pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPlayButtonClickedBlocking(
     _env: JNIEnv,
     _class: jclass,
 ) {
@@ -259,20 +295,40 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPlayB
     }
 }
 
+#[inline]
+fn store_cur_playlist() {
+    unsafe {
+        StorageUtil::store_current_playlist(
+            PARAMS
+                .read()
+                .unwrap()
+                .as_ref()
+                .unwrap()
+                .get_cur_playlist()
+                .clone(),
+        )
+        .unwrap_or_default();
+    }
+}
+
 #[no_mangle]
 #[allow(non_snake_case)]
-pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onNextTrackClickedAsync(
+pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onNextTrackClickedBlocking(
     _env: JNIEnv,
     _class: jclass,
 ) {
     if has_cur_track() {
-        PARAMS
-            .write()
-            .unwrap()
-            .as_mut()
-            .unwrap()
-            .cur_playlist
-            .skip_to_next();
+        {
+            PARAMS
+                .write()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .get_cur_playlist_mut()
+                .skip_to_next();
+        }
+
+        store_cur_playlist();
 
         let (path, duration) = get_path_and_duration_of_cur_track();
         block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
@@ -281,18 +337,22 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onNextT
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPreviousTrackClickedAsync(
+pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPreviousTrackClickedBlocking(
     _env: JNIEnv,
     _class: jclass,
 ) {
     if has_cur_track() {
-        PARAMS
-            .write()
-            .unwrap()
-            .as_mut()
-            .unwrap()
-            .cur_playlist
-            .skip_to_prev();
+        {
+            PARAMS
+                .write()
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .get_cur_playlist_mut()
+                .skip_to_prev();
+        }
+
+        store_cur_playlist();
 
         let (path, duration) = get_path_and_duration_of_cur_track();
         block_on(AUDIO_PLAYER.write().unwrap().play(path, duration))
@@ -301,7 +361,7 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPrevi
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrackIndex(
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrackIndexBlocking(
     _env: JNIEnv,
     _class: jclass,
 ) -> jsize {
@@ -311,7 +371,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrackInd
             .unwrap()
             .as_ref()
             .unwrap()
-            .cur_playlist
+            .get_cur_playlist_mut()
             .get_cur_ind() as jsize
     }
 }
@@ -338,12 +398,14 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_seekTo(
     _class: jclass,
     millis: jlong,
 ) {
+    let duration = get_duration_of_cur_track();
+
     unsafe {
         if has_cur_track() {
             AUDIO_PLAYER
                 .write()
                 .unwrap()
-                .seek_to(Duration::from_millis(millis as u64))
+                .seek_to(Duration::from_millis(millis as u64), duration)
         }
     }
 }
@@ -359,7 +421,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isPlaying(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_replayCurrentTrackAsync(
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_replayCurrentTrackBlocking(
     _env: JNIEnv,
     _class: jclass,
 ) {
@@ -433,7 +495,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getTrackOrder(
     _class: jclass,
 ) -> jintArray {
     let ord = unsafe {
-        let order = PARAMS.write().unwrap().as_mut().unwrap().track_order;
+        let order = PARAMS.read().unwrap().as_ref().unwrap().track_order;
         (order.comparator, order.order)
     };
 
@@ -453,7 +515,47 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setTrackOrder(
     order: jint,
 ) {
     unsafe {
-        PARAMS.write().unwrap().as_mut().unwrap().track_order =
-            TrackOrder::new(Comparator::from(comparator), Ord::from(order - 5))
+        let order = TrackOrder::new(Comparator::from(comparator), Ord::from(order - 5));
+        PARAMS.write().unwrap().as_mut().unwrap().track_order = order;
+        StorageUtil::store_track_order(order).unwrap_or_default();
     }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setMusicSearchPath(
+    env: JNIEnv,
+    _class: jclass,
+    path: JString,
+) {
+    let path: String = env.get_string(path).unwrap().into();
+    unsafe { PARAMS.write().unwrap().as_mut().unwrap().music_search_path = PathBuf::from(path) }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_storeMusicSearchPath(
+    _env: JNIEnv,
+    _class: jclass,
+) {
+    StorageUtil::store_music_search_path(unsafe {
+        PARAMS
+            .read()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .music_search_path
+            .clone()
+    })
+    .unwrap_or_default()
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_storeTrackOrder(
+    _env: JNIEnv,
+    _class: jclass,
+) {
+    StorageUtil::store_track_order(unsafe { PARAMS.read().unwrap().as_ref().unwrap().track_order })
+        .unwrap_or_default()
 }

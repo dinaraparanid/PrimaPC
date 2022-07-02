@@ -8,7 +8,7 @@ import kotlinx.coroutines.*
 suspend fun scanTracks(tracksState: SnapshotStateList<Track>, filteredTracksState: SnapshotStateList<Track>) =
     coroutineScope {
         val tracksTask = async(Dispatchers.IO) {
-            RustLibs.getAllTracksAsync()
+            RustLibs.getAllTracksBlocking()
         }
 
         launch {

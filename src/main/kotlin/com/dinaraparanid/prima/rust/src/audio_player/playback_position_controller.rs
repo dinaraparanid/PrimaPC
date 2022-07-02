@@ -1,5 +1,6 @@
 extern crate futures;
 
+use crate::StorageUtil;
 use futures::future::AbortHandle;
 
 use std::{
@@ -17,7 +18,9 @@ impl Default for PlaybackPositionController {
     #[inline]
     fn default() -> Self {
         Self {
-            position: Arc::new(RwLock::new(Duration::default())),
+            position: Arc::new(RwLock::new(Duration::from_millis(
+                StorageUtil::load_current_playback_position(),
+            ))),
             task: None,
         }
     }

@@ -89,21 +89,25 @@ fun LazyItemScope.TrackItem(
                     isPlayingState.value = !isPlayingState.value
                 }
 
-                RustLibs.onTrackClickedAsync(tracks, index)
+                coroutineScope.launch(Dispatchers.IO) {
+                    RustLibs.onTrackClickedBlocking(tracks, index)
 
-                when {
-                    isPlayingState.value -> coroutineScope.startPlaybackControlTasks(
-                        currentTrackState,
-                        isPlayingState,
-                        isPlayingCoverLoadedState,
-                        playbackPositionState,
-                        loopingState,
-                        tracksState,
-                        isPlaybackTrackDraggingState,
-                        speedState
-                    )
+                    when {
+                        isPlayingState.value -> coroutineScope.launch {
+                            startPlaybackControlTasks(
+                                currentTrackState,
+                                isPlayingState,
+                                isPlayingCoverLoadedState,
+                                playbackPositionState,
+                                loopingState,
+                                tracksState,
+                                isPlaybackTrackDraggingState,
+                                speedState
+                            )
+                        }
 
-                    else -> cancelPlaybackControlTasks()
+                        else -> cancelPlaybackControlTasks()
+                    }
                 }
             },
             modifier = Modifier.fillMaxSize().padding(3.dp),

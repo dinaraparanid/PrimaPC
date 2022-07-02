@@ -169,7 +169,7 @@ impl<T: TrackTrait> Clone for DefaultPlaylist<T> {
             self.get_title().map(|title| title.clone()),
             self.get_type(),
             self.get_tracks().clone(),
-            0,
+            self.get_cur_ind(),
         )
     }
 }

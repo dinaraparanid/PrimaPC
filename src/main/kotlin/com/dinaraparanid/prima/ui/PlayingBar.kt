@@ -204,14 +204,14 @@ private fun ColumnScope.Buttons(
             contentPadding = PaddingValues(horizontal = 20.dp),
             modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
             onClick = {
-                if (currentTrackState.value != null) {
-                    RustLibs.onPreviousTrackClickedAsync()
-                    currentTrackState.value = RustLibs.getCurTrack()
+                if (currentTrackState.value != null) coroutineScope.launch(Dispatchers.IO) {
+                    RustLibs.onPreviousTrackClickedBlocking()
+                    currentTrackState.value = RustLibs.getCurTrackBlocking()
                     isPlayingState.value = true
                     isPlayingCoverLoadedState.value = false
                     playbackPositionState.value = 0F
 
-                    coroutineScope.startPlaybackControlTasks(
+                    startPlaybackControlTasks(
                         currentTrackState,
                         isPlayingState,
                         isPlayingCoverLoadedState,
@@ -240,12 +240,12 @@ private fun ColumnScope.Buttons(
             contentPadding = PaddingValues(),
             modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
             onClick = {
-                if (currentTrackState.value != null) {
+                if (currentTrackState.value != null) coroutineScope.launch(Dispatchers.IO) {
                     isPlayingState.value = !isPlayingState.value
-                    RustLibs.onPlayButtonClickedAsync()
+                    RustLibs.onPlayButtonClickedBlocking()
 
                     when {
-                        isPlayingState.value -> coroutineScope.startPlaybackControlTasks(
+                        isPlayingState.value -> startPlaybackControlTasks(
                             currentTrackState,
                             isPlayingState,
                             isPlayingCoverLoadedState,
@@ -283,16 +283,18 @@ private fun ColumnScope.Buttons(
             modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
             onClick = {
                 if (currentTrackState.value != null)
-                    coroutineScope.switchToNextTrack(
-                        currentTrackState,
-                        isPlayingState,
-                        isPlayingCoverLoadedState,
-                        playbackPositionState,
-                        loopingState,
-                        tracksState,
-                        isPlaybackTrackDraggingState,
-                        speedState
-                    )
+                    coroutineScope.launch(Dispatchers.IO) {
+                        switchToNextTrack(
+                            currentTrackState,
+                            isPlayingState,
+                            isPlayingCoverLoadedState,
+                            playbackPositionState,
+                            loopingState,
+                            tracksState,
+                            isPlaybackTrackDraggingState,
+                            speedState
+                        )
+                    }
             }
         ) {
             Image(
@@ -358,19 +360,20 @@ private fun ColumnScope.Track(
         onValueChangeFinished = {
             isPlayingState.value = true
             isPlaybackTrackDraggingState.value = false
-
             RustLibs.seekTo(playbackPositionState.value.toLong())
 
-            coroutineScope.startPlaybackControlTasks(
-                currentTrackState,
-                isPlayingState,
-                isPlayingCoverLoadedState,
-                playbackPositionState,
-                loopingState,
-                tracksState,
-                isPlaybackTrackDraggingState,
-                speedState
-            )
+            coroutineScope.launch {
+                startPlaybackControlTasks(
+                    currentTrackState,
+                    isPlayingState,
+                    isPlayingCoverLoadedState,
+                    playbackPositionState,
+                    loopingState,
+                    tracksState,
+                    isPlaybackTrackDraggingState,
+                    speedState
+                )
+            }
         }
     )
 

@@ -1,6 +1,7 @@
 package com.dinaraparanid.prima.ui
 
 import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Colors
 import androidx.compose.material.MaterialTheme
@@ -44,8 +45,16 @@ fun MainScreen() {
             isLight = !Params.theme.isNight
         )
     ) {
+        val coroutineScope = rememberCoroutineScope()
+        val currentTrackState: MutableState<Track?> = remember { mutableStateOf(null) }
+
+        coroutineScope.launch {
+            currentTrackState.value = withContext(Dispatchers.IO) {
+                RustLibs.getCurTrackBlocking()
+            }
+        }
+
         val isPlayingState = remember { mutableStateOf(false) }
-        val currentTrackState = remember { mutableStateOf(RustLibs.getCurTrack()) }
         val isPlayingCoverLoadedState = remember { mutableStateOf(false) }
         val isPlaybackTrackDraggingState = remember { mutableStateOf(false) }
         val playbackPositionState = remember { mutableStateOf(RustLibs.getPlaybackPosition().toFloat()) }
@@ -92,7 +101,7 @@ fun MainScreen() {
                     Row(modifier = Modifier.fillMaxSize()) {
                         NavigationMenu(rootScreen)
 
-                        Surface(modifier = Modifier.fillMaxHeight().width(3.dp), color = Params.primaryColor) {}
+                        Spacer(Modifier.fillMaxHeight().width(3.dp).background(Params.primaryColor))
 
                         RootView(
                             rootScreen,
@@ -115,7 +124,7 @@ fun MainScreen() {
 
 private var playbackControlTasks: Job? = null
 
-fun CoroutineScope.startPlaybackControlTasks(
+suspend fun startPlaybackControlTasks(
     currentTrackState: MutableState<Track?>,
     isPlayingState: MutableState<Boolean>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
@@ -124,7 +133,7 @@ fun CoroutineScope.startPlaybackControlTasks(
     tracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>
-) {
+): Unit = coroutineScope {
     playbackControlTasks = launch(Dispatchers.Default) {
         runCalculationOfSliderPos(
             isPlaybackTrackDraggingState,
@@ -161,7 +170,7 @@ private suspend fun runCalculationOfSliderPos(
     }
 }
 
-fun CoroutineScope.switchToNextTrack(
+suspend fun switchToNextTrack(
     currentTrackState: MutableState<Track?>,
     isPlayingState: MutableState<Boolean>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
@@ -170,64 +179,15 @@ fun CoroutineScope.switchToNextTrack(
     tracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>
-) {
-    RustLibs.onNextTrackClickedAsync()
-    currentTrackState.value = RustLibs.getCurTrack()
-    isPlayingState.value = true
-    isPlayingCoverLoadedState.value = false
-    playbackPositionState.value = 0F
+) = coroutineScope {
+    launch(Dispatchers.IO) {
+        RustLibs.onNextTrackClickedBlocking()
+        currentTrackState.value = RustLibs.getCurTrackBlocking()
+        isPlayingState.value = true
+        isPlayingCoverLoadedState.value = false
+        playbackPositionState.value = 0F
 
-    startPlaybackControlTasks(
-        currentTrackState,
-        isPlayingState,
-        isPlayingCoverLoadedState,
-        playbackPositionState,
-        loopingState,
-        tracksState,
-        isPlaybackTrackDraggingState,
-        speedState
-    )
-}
-
-private fun CoroutineScope.replayCurrentTrack(
-    currentTrackState: MutableState<Track?>,
-    isPlayingState: MutableState<Boolean>,
-    isPlayingCoverLoadedState: MutableState<Boolean>,
-    playbackPositionState: MutableState<Float>,
-    loopingState: MutableState<Int>,
-    tracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>,
-    speedState: State<Float>
-) {
-    RustLibs.replayCurrentTrackAsync()
-
-    startPlaybackControlTasks(
-        currentTrackState,
-        isPlayingState,
-        isPlayingCoverLoadedState,
-        playbackPositionState,
-        loopingState,
-        tracksState,
-        isPlaybackTrackDraggingState,
-        speedState
-    )
-}
-
-fun CoroutineScope.onPlaybackCompletition(
-    currentTrackState: MutableState<Track?>,
-    isPlayingState: MutableState<Boolean>,
-    isPlayingCoverLoadedState: MutableState<Boolean>,
-    playbackPositionState: MutableState<Float>,
-    loopingState: MutableState<Int>,
-    tracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>,
-    speedState: State<Float>
-) = when {
-    isPlaybackTrackDraggingState.value -> Unit
-
-    else -> when (loopingState.value) {
-        // Playlist looping
-        0 -> switchToNextTrack(
+        startPlaybackControlTasks(
             currentTrackState,
             isPlayingState,
             isPlayingCoverLoadedState,
@@ -237,9 +197,23 @@ fun CoroutineScope.onPlaybackCompletition(
             isPlaybackTrackDraggingState,
             speedState
         )
+    }
+}
 
-        // Track looping
-        1 -> replayCurrentTrack(
+private suspend fun replayCurrentTrack(
+    currentTrackState: MutableState<Track?>,
+    isPlayingState: MutableState<Boolean>,
+    isPlayingCoverLoadedState: MutableState<Boolean>,
+    playbackPositionState: MutableState<Float>,
+    loopingState: MutableState<Int>,
+    tracksState: SnapshotStateList<Track>,
+    isPlaybackTrackDraggingState: State<Boolean>,
+    speedState: State<Float>
+) = coroutineScope {
+    launch(Dispatchers.IO) {
+        RustLibs.replayCurrentTrackBlocking()
+
+        startPlaybackControlTasks(
             currentTrackState,
             isPlayingState,
             isPlayingCoverLoadedState,
@@ -249,15 +223,25 @@ fun CoroutineScope.onPlaybackCompletition(
             isPlaybackTrackDraggingState,
             speedState
         )
+    }
+}
 
-        // No looping
-        else -> when {
-            RustLibs.getCurTrackIndex() == tracksState.size - 1 -> {
-                isPlayingState.value = false
-                playbackPositionState.value = RustLibs.getCurTrack()?.duration?.toFloat() ?: 0F
-            }
+suspend fun onPlaybackCompletition(
+    currentTrackState: MutableState<Track?>,
+    isPlayingState: MutableState<Boolean>,
+    isPlayingCoverLoadedState: MutableState<Boolean>,
+    playbackPositionState: MutableState<Float>,
+    loopingState: MutableState<Int>,
+    tracksState: SnapshotStateList<Track>,
+    isPlaybackTrackDraggingState: State<Boolean>,
+    speedState: State<Float>
+) = coroutineScope {
+    when {
+        isPlaybackTrackDraggingState.value -> Unit
 
-            else -> switchToNextTrack(
+        else -> when (loopingState.value) {
+            // Playlist looping
+            0 -> switchToNextTrack(
                 currentTrackState,
                 isPlayingState,
                 isPlayingCoverLoadedState,
@@ -267,6 +251,43 @@ fun CoroutineScope.onPlaybackCompletition(
                 isPlaybackTrackDraggingState,
                 speedState
             )
+
+            // Track looping
+            1 -> replayCurrentTrack(
+                currentTrackState,
+                isPlayingState,
+                isPlayingCoverLoadedState,
+                playbackPositionState,
+                loopingState,
+                tracksState,
+                isPlaybackTrackDraggingState,
+                speedState
+            )
+
+            // No looping
+            else -> launch(Dispatchers.IO) {
+                when {
+                    RustLibs.getCurTrackIndexBlocking() == tracksState.size - 1 -> {
+                        isPlayingState.value = false
+
+                        launch(Dispatchers.IO) {
+                            playbackPositionState.value =
+                                RustLibs.getCurTrackBlocking()?.duration?.toFloat() ?: 0F
+                        }
+                    }
+
+                    else -> switchToNextTrack(
+                        currentTrackState,
+                        isPlayingState,
+                        isPlayingCoverLoadedState,
+                        playbackPositionState,
+                        loopingState,
+                        tracksState,
+                        isPlaybackTrackDraggingState,
+                        speedState
+                    )
+                }
+            }
         }
     }
 }

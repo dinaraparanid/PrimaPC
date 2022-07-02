@@ -159,13 +159,48 @@ impl StorageUtil {
         match all_data.get(&Yaml::String("current_playlist".to_string())) {
             None => Self::set_default_current_playlist().unwrap_or(DefaultPlaylist::default()),
 
-            Some(y) => match y.as_vec() {
+            Some(y) => match y.as_hash() {
                 None => Self::set_default_current_playlist().unwrap_or(DefaultPlaylist::default()),
-
                 Some(playlist) => {
                     DefaultPlaylist::from_yaml(playlist).unwrap_or(DefaultPlaylist::default())
                 }
             },
+        }
+    }
+
+    #[inline]
+    pub fn store_current_playback_position(millis: u64) -> Result<()> {
+        let mut all_data = Self::read_all_data_from_file()?;
+
+        all_data.insert(
+            Yaml::String("current_playback_position".to_string()),
+            Yaml::Integer(millis as i64),
+        );
+
+        Self::write_data_to_file(all_data)
+    }
+
+    #[inline]
+    fn set_default_current_playback_position() -> Option<u64> {
+        let default_current_playback_position = 0;
+        Self::store_current_playback_position(default_current_playback_position).ok()?;
+        return Some(default_current_playback_position);
+    }
+
+    #[inline]
+    pub fn load_current_playback_position() -> u64 {
+        let all_data = match Self::read_all_data_from_file() {
+            Ok(x) => x,
+            Err(_) => return Self::set_default_current_playback_position().unwrap_or(0),
+        };
+
+        match all_data.get(&Yaml::String("current_playback_position".to_string())) {
+            None => Self::set_default_current_playback_position().unwrap_or(0),
+
+            Some(y) => y
+                .as_i64()
+                .unwrap_or(Self::set_default_current_playback_position().unwrap_or(0) as i64)
+                as u64,
         }
     }
 }

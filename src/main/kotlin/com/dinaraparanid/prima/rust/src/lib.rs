@@ -437,7 +437,9 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setNextLooping
 ) -> jint {
     unsafe {
         AUDIO_PLAYER.write().unwrap().set_next_looping_state();
-        AUDIO_PLAYER.read().unwrap().get_looping_state().into()
+        let state = AUDIO_PLAYER.read().unwrap().get_looping_state();
+        StorageUtil::store_looping_state(state).unwrap_or_default();
+        state.into()
     }
 }
 
@@ -448,6 +450,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setVolume(
     _class: jclass,
     volume: jfloat,
 ) {
+    StorageUtil::store_volume(volume).unwrap_or_default();
     unsafe { AUDIO_PLAYER.write().unwrap().set_volume(volume as f32) }
 }
 
@@ -458,6 +461,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setSpeed(
     _class: jclass,
     speed: jfloat,
 ) {
+    StorageUtil::store_speed(speed).unwrap_or_default();
     unsafe { AUDIO_PLAYER.write().unwrap().set_speed(speed as f32) }
 }
 
@@ -558,4 +562,13 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_storeTrackOrde
 ) {
     StorageUtil::store_track_order(unsafe { PARAMS.read().unwrap().as_ref().unwrap().track_order })
         .unwrap_or_default()
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_storeCurPlaybackPos(
+    _env: JNIEnv,
+    _class: jclass,
+) {
+    unsafe { AUDIO_PLAYER.read().unwrap().save_cur_playback_pos_async() }
 }

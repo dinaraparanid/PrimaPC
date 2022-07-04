@@ -41,7 +41,6 @@ pub struct AudioPlayer {
     pool: ThreadPool,
 }
 
-// TODO: Load playback params
 pub static mut AUDIO_PLAYER: Lazy<Arc<RwLock<AudioPlayer>>> =
     Lazy::new(|| Arc::new(RwLock::new(AudioPlayer::new(PlaybackParams::default()))));
 
@@ -222,7 +221,7 @@ impl AudioPlayer {
     }
 
     #[inline]
-    fn save_cur_playback_pos_async(&self) {
+    pub fn save_cur_playback_pos_async(&self) {
         let pos = self.get_cur_playback_pos().as_millis() as u64;
 
         self.pool
@@ -330,10 +329,7 @@ impl AudioPlayer {
 
     #[inline]
     pub fn get_volume(&self) -> f32 {
-        self.playback_data
-            .as_ref()
-            .map(|pd| pd.2.speed())
-            .unwrap_or(1.0)
+        self.playback_params.get_volume()
     }
 
     #[inline]

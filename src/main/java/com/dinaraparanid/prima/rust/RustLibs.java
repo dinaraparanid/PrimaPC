@@ -89,6 +89,8 @@ public enum RustLibs {;
 
     public static final native void storeTrackOrder();
 
+    public static final native void storeCurPlaybackPos();
+
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;
     }

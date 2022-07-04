@@ -1,7 +1,7 @@
 extern crate atomic_float;
 extern crate jni;
 
-use crate::get_in_borders;
+use crate::{get_in_borders, StorageUtil};
 use atomic_float::AtomicF32;
 use jni::sys::jint;
 
@@ -36,11 +36,11 @@ impl Default for PlaybackParams {
     #[inline]
     fn default() -> Self {
         Self {
-            volume: 1_f32,
-            speed: Arc::new(AtomicF32::new(1_f32)),
+            volume: StorageUtil::load_volume(),
+            speed: Arc::new(AtomicF32::new(StorageUtil::load_speed())),
             reverb: ReverbParams::default(),
             fade_in: Duration::default(),
-            looping_state: LoopingState::default(),
+            looping_state: StorageUtil::load_looping_state(),
         }
     }
 }
@@ -172,6 +172,41 @@ impl From<LoopingState> for jint {
             LoopingState::Playlist => 0,
             LoopingState::Track => 1,
             LoopingState::NoLooping => 2,
+        }
+    }
+}
+
+impl From<jint> for LoopingState {
+    #[inline]
+    fn from(state: jint) -> Self {
+        match state {
+            0 => Self::Playlist,
+            1 => Self::Track,
+            2 => Self::NoLooping,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl From<LoopingState> for i64 {
+    #[inline]
+    fn from(state: LoopingState) -> Self {
+        match state {
+            LoopingState::Playlist => 0,
+            LoopingState::Track => 1,
+            LoopingState::NoLooping => 2,
+        }
+    }
+}
+
+impl From<i64> for LoopingState {
+    #[inline]
+    fn from(state: i64) -> Self {
+        match state {
+            0 => Self::Playlist,
+            1 => Self::Track,
+            2 => Self::NoLooping,
+            _ => unreachable!(),
         }
     }
 }

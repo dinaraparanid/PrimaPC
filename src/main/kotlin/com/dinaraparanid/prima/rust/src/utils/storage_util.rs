@@ -8,7 +8,8 @@ use std::{
 };
 
 use crate::{
-    utils::extensions::path_buf_ext::PathBufExt, DefaultPlaylist, DefaultTrack, TrackOrder,
+    audio_player::playback_params::LoopingState, utils::extensions::path_buf_ext::PathBufExt,
+    DefaultPlaylist, DefaultTrack, TrackOrder,
 };
 
 use dirs2::audio_dir;
@@ -191,16 +192,148 @@ impl StorageUtil {
     pub fn load_current_playback_position() -> u64 {
         let all_data = match Self::read_all_data_from_file() {
             Ok(x) => x,
-            Err(_) => return Self::set_default_current_playback_position().unwrap_or(0),
+            Err(_) => {
+                println!("POS 1");
+                return Self::set_default_current_playback_position().unwrap_or_default();
+            }
         };
 
         match all_data.get(&Yaml::String("current_playback_position".to_string())) {
-            None => Self::set_default_current_playback_position().unwrap_or(0),
+            None => {
+                println!("POS 2");
+                Self::set_default_current_playback_position().unwrap_or_default()
+            }
 
-            Some(y) => y
-                .as_i64()
-                .unwrap_or(Self::set_default_current_playback_position().unwrap_or(0) as i64)
-                as u64,
+            Some(y) => y.as_i64().unwrap_or_else(|| {
+                println!("POS 3");
+                Self::set_default_current_playback_position().unwrap_or_default() as i64
+            }) as u64,
+        }
+    }
+
+    #[inline]
+    pub fn store_looping_state(looping_state: LoopingState) -> Result<()> {
+        let mut all_data = Self::read_all_data_from_file()?;
+
+        all_data.insert(
+            Yaml::String("looping_state".to_string()),
+            Yaml::Integer(looping_state.into()),
+        );
+
+        Self::write_data_to_file(all_data)
+    }
+
+    #[inline]
+    fn set_default_looping_state() -> Option<LoopingState> {
+        let default_looping_state = LoopingState::default();
+        Self::store_looping_state(default_looping_state).ok()?;
+        return Some(default_looping_state);
+    }
+
+    #[inline]
+    pub fn load_looping_state() -> LoopingState {
+        let all_data = match Self::read_all_data_from_file() {
+            Ok(x) => x,
+            Err(_) => {
+                println!("LOOPING 1");
+                return Self::set_default_looping_state().unwrap_or_default();
+            }
+        };
+
+        match all_data.get(&Yaml::String("looping_state".to_string())) {
+            None => {
+                println!("LOOPING 2");
+                Self::set_default_looping_state().unwrap_or_default()
+            }
+
+            Some(y) => y.as_i64().map(LoopingState::from).unwrap_or_else(|| {
+                println!("LOOPING 3");
+                Self::set_default_looping_state().unwrap_or_default()
+            }),
+        }
+    }
+
+    #[inline]
+    pub fn store_volume(volume: f32) -> Result<()> {
+        let mut all_data = Self::read_all_data_from_file()?;
+
+        all_data.insert(
+            Yaml::String("volume".to_string()),
+            Yaml::Real(format!("{:.2}", volume)),
+        );
+
+        Self::write_data_to_file(all_data)
+    }
+
+    #[inline]
+    fn set_default_volume() -> Option<f32> {
+        let default_volume = 1_f32;
+        Self::store_volume(default_volume).ok()?;
+        return Some(default_volume);
+    }
+
+    #[inline]
+    pub fn load_volume() -> f32 {
+        let all_data = match Self::read_all_data_from_file() {
+            Ok(x) => x,
+            Err(_) => {
+                println!("VOLUME 1");
+                return Self::set_default_volume().unwrap_or(1_f32);
+            }
+        };
+
+        match all_data.get(&Yaml::String("volume".to_string())) {
+            None => {
+                println!("VOLUME 2");
+                Self::set_default_volume().unwrap_or(1_f32)
+            }
+
+            Some(y) => y.as_f64().map(|double| double as f32).unwrap_or_else(|| {
+                println!("VOLUME 3");
+                Self::set_default_volume().unwrap_or(1_f32)
+            }),
+        }
+    }
+
+    #[inline]
+    pub fn store_speed(speed: f32) -> Result<()> {
+        let mut all_data = Self::read_all_data_from_file()?;
+
+        all_data.insert(
+            Yaml::String("speed".to_string()),
+            Yaml::Real(format!("{:.2}", speed)),
+        );
+
+        Self::write_data_to_file(all_data)
+    }
+
+    #[inline]
+    fn set_default_speed() -> Option<f32> {
+        let default_speed = 1_f32;
+        Self::store_speed(default_speed).ok()?;
+        return Some(default_speed);
+    }
+
+    #[inline]
+    pub fn load_speed() -> f32 {
+        let all_data = match Self::read_all_data_from_file() {
+            Ok(x) => x,
+            Err(_) => {
+                println!("SPEED 1");
+                return Self::set_default_speed().unwrap_or(1_f32);
+            }
+        };
+
+        match all_data.get(&Yaml::String("speed".to_string())) {
+            None => {
+                println!("SPEED 2");
+                Self::set_default_speed().unwrap_or(1_f32)
+            }
+
+            Some(y) => y.as_f64().map(|double| double as f32).unwrap_or_else(|| {
+                println!("SPEED 3");
+                Self::set_default_speed().unwrap_or(1_f32)
+            }),
         }
     }
 }

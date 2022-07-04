@@ -32,12 +32,7 @@ impl JNIEnvExt for JNIEnv<'_> {
         ret: JavaType,
         args: &[JValue],
     ) -> JValue {
-        self.call_static_method_unchecked(
-            class,
-            self.get_static_method_id(class, method_name, sig).unwrap(),
-            ret,
-            args,
-        )
-        .unwrap()
+        self.call_static_method_unchecked(class, (class, method_name, sig), ret, args)
+            .unwrap()
     }
 }

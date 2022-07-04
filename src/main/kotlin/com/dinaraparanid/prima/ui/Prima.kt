@@ -23,7 +23,10 @@ fun Prima() {
             title = "Prima",
             icon = painterResource("images/app_icon.png"),
             state = WindowState(width = width.dp, height = height.dp),
-            onCloseRequest = ::exitApplication,
+            onCloseRequest = {
+                RustLibs.storeCurPlaybackPos()
+                exitApplication()
+            },
         ) {
             MainScreen()
         }

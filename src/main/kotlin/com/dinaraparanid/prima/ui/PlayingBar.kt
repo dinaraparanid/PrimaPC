@@ -344,8 +344,8 @@ private fun ColumnScope.Track(
     val coroutineScope = rememberCoroutineScope()
 
     Slider(
-        value = playbackPositionState.value,
         valueRange = (0F..(currentTrackState.value?.duration?.toFloat()?.coerceAtLeast(1F) ?: 1F)),
+        value = playbackPositionState.value,
         colors = SliderDefaults.colors(
             thumbColor = Params.secondaryAlternativeColor,
             activeTrackColor = Params.secondaryAlternativeColor,

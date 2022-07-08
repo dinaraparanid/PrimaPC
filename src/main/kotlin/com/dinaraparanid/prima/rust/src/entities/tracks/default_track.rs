@@ -4,12 +4,15 @@ extern crate jni;
 use jni::{
     objects::{JObject, JValue},
     signature::JavaType,
-    sys::{jbyte, jshort},
+    sys::jshort,
     JNIEnv,
 };
 
 use crate::{
-    entities::tracks::track_trait::TrackTrait,
+    entities::{
+        favourable::Favourable,
+        tracks::{favourite_track::FavouriteTrack, track_trait::TrackTrait},
+    },
     utils::{
         extensions::{jni_env_ext::JNIEnvExt, jobject_ext::JObjectExt},
         wrappers::jtrack::JTrack,
@@ -21,9 +24,9 @@ use std::path::PathBuf;
 
 #[derive(Clone, Debug)]
 pub struct DefaultTrack {
-    title: Option<Vec<jbyte>>,
-    artist: Option<Vec<jbyte>>,
-    album: Option<Vec<jbyte>>,
+    title: Option<String>,
+    artist: Option<String>,
+    album: Option<String>,
     path: PathBuf,
     duration: Duration,
     add_date: DateTime<Local>,
@@ -32,27 +35,18 @@ pub struct DefaultTrack {
 
 impl TrackTrait for DefaultTrack {
     #[inline]
-    fn get_title(&self) -> Option<&Vec<jbyte>> {
-        match &self.title {
-            None => None,
-            Some(title) => Some(title),
-        }
+    fn get_title(&self) -> Option<&String> {
+        self.title.as_ref()
     }
 
     #[inline]
-    fn get_artist(&self) -> Option<&Vec<jbyte>> {
-        match &self.artist {
-            None => None,
-            Some(artist) => Some(artist),
-        }
+    fn get_artist(&self) -> Option<&String> {
+        self.artist.as_ref()
     }
 
     #[inline]
-    fn get_album(&self) -> Option<&Vec<jbyte>> {
-        match &self.album {
-            None => None,
-            Some(album) => Some(album),
-        }
+    fn get_album(&self) -> Option<&String> {
+        self.album.as_ref()
     }
 
     #[inline]
@@ -76,6 +70,39 @@ impl TrackTrait for DefaultTrack {
     }
 }
 
+impl Favourable<FavouriteTrack> for DefaultTrack {
+    #[inline]
+    fn to_favourable(&self) -> FavouriteTrack {
+        FavouriteTrack::new(
+            self.title.clone(),
+            self.artist.clone(),
+            self.album.clone(),
+            self.path.clone(),
+            self.duration,
+            self.add_date.clone(),
+            self.number_in_album,
+        )
+    }
+
+    #[inline]
+    fn into_favourable(self) -> FavouriteTrack {
+        FavouriteTrack::new(
+            self.title,
+            self.artist,
+            self.album,
+            self.path,
+            self.duration,
+            self.add_date,
+            self.number_in_album,
+        )
+    }
+
+    #[inline]
+    fn into_self(favourable: FavouriteTrack) -> Self {
+        favourable.into_default()
+    }
+}
+
 impl PartialEq for DefaultTrack {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
@@ -93,9 +120,9 @@ impl From<JTrack> for DefaultTrack {
 impl DefaultTrack {
     #[inline]
     pub fn new(
-        title: Option<Vec<jbyte>>,
-        artist: Option<Vec<jbyte>>,
-        album: Option<Vec<jbyte>>,
+        title: Option<String>,
+        artist: Option<String>,
+        album: Option<String>,
         path: PathBuf,
         duration: Duration,
         add_date: DateTime<Local>,
@@ -113,7 +140,7 @@ impl DefaultTrack {
     }
 
     #[inline]
-    pub fn to_jtrack(self) -> JTrack {
+    pub fn into_jtrack(self) -> JTrack {
         JTrack::new(
             self.title,
             self.artist,

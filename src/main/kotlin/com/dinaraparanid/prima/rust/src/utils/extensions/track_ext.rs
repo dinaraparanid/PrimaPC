@@ -2,14 +2,13 @@ extern crate jni;
 extern crate yaml_rust;
 
 use crate::{utils::extensions::path_buf_ext::PathBufExt, TrackTrait};
+use yaml_rust::Yaml;
 
 use jni::{
     objects::{JObject, JValue},
     sys::{jlong, jshort},
     JNIEnv,
 };
-
-use yaml_rust::Yaml;
 
 pub trait TrackExt: TrackTrait {
     fn to_java_track<'a>(&self, env: &'a JNIEnv<'a>) -> JObject<'a>;
@@ -45,41 +44,17 @@ impl<T: TrackTrait> TrackExt for T {
         }
 
         env.new_object(
-            "com/dinaraparanid/prima/entities/Track",
-            "([B[B[B[BJS)V",
+            "com/dinaraparanid/prima/daos/Track",
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[BJS)V",
             &[
                 JValue::Object(JObject::from(
-                    env.byte_array_from_slice(
-                        self.get_title()
-                            .unwrap()
-                            .iter()
-                            .map(|&jb| jb as u8)
-                            .collect::<Vec<_>>()
-                            .as_slice(),
-                    )
-                    .unwrap(),
+                    env.new_string(self.get_title().unwrap()).unwrap(),
                 )),
                 JValue::Object(JObject::from(
-                    env.byte_array_from_slice(
-                        self.get_artist()
-                            .unwrap()
-                            .iter()
-                            .map(|&jb| jb as u8)
-                            .collect::<Vec<_>>()
-                            .as_slice(),
-                    )
-                    .unwrap(),
+                    env.new_string(self.get_artist().unwrap()).unwrap(),
                 )),
                 JValue::Object(JObject::from(
-                    env.byte_array_from_slice(
-                        self.get_album()
-                            .unwrap()
-                            .iter()
-                            .map(|&jb| jb as u8)
-                            .collect::<Vec<_>>()
-                            .as_slice(),
-                    )
-                    .unwrap(),
+                    env.new_string(self.get_album().unwrap()).unwrap(),
                 )),
                 JValue::Object(JObject::from(
                     env.byte_array_from_slice(path_buf.as_slice()).unwrap(),

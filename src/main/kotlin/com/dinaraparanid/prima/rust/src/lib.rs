@@ -1,8 +1,15 @@
 extern crate futures;
 extern crate jni;
 
+#[macro_use]
+extern crate diesel;
+
+#[macro_use]
+extern crate diesel_migrations;
+
 pub mod audio_player;
 pub mod audio_scanner;
+pub mod databases;
 pub mod entities;
 pub mod jvm;
 pub mod utils;
@@ -75,7 +82,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracksBl
     let rust_tracks = &*rust_tracks.lock().unwrap();
 
     let java_track_class = env
-        .find_class("com/dinaraparanid/prima/entities/Track")
+        .find_class("com/dinaraparanid/prima/daos/Track")
         .unwrap();
 
     let java_tracks = env

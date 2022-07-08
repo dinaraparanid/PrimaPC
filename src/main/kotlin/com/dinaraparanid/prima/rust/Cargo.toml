@@ -15,6 +15,10 @@ os_str_bytes = "6.1.0"
 futures-timer = "3.0.2"
 atomic_float = "0.1.0"
 yaml-rust = "0.4.5"
+diesel = { version = "1.4.8", features = ["sqlite"] }
+diesel_migrations = "1.4.0"
+dotenv = "0.15.0"
+serde = { version = "1.0", features = ["derive"] }
 
 [lib]
 crate-type = ["cdylib"]

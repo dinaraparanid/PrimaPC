@@ -6,12 +6,12 @@ use crate::{
 };
 
 use chrono::{DateTime, Duration};
-use std::{path::PathBuf, slice::from_raw_parts};
+use std::path::PathBuf;
 
 use jni::{
-    objects::{JObject, JValue, ReleaseMode},
+    objects::{JObject, JString, JValue},
     signature::{JavaType, Primitive},
-    sys::{jbyte, jsize},
+    sys::jsize,
     JNIEnv,
 };
 
@@ -26,9 +26,9 @@ impl JObjectExt for JObject<'_> {
             return None;
         }
 
-        let title = get_bytes(jni_env, *self, 0);
-        let artist = get_bytes(jni_env, *self, 1);
-        let album = get_bytes(jni_env, *self, 2);
+        let title = get_str(jni_env, *self, 0);
+        let artist = get_str(jni_env, *self, 1);
+        let album = get_str(jni_env, *self, 2);
 
         let duration = unsafe {
             JNIEnvExt::call_static_method(
@@ -77,20 +77,17 @@ impl JObjectExt for JObject<'_> {
 }
 
 #[inline]
-fn get_bytes(jni_env: &JNIEnv, array: JObject, index: jsize) -> Option<Vec<jbyte>> {
-    let arr = match jni_env.get_byte_array_elements(
-        match jni_env.get_object_array_element(array.into_inner(), index) {
+fn get_str(jni_env: &JNIEnv, array: JObject, index: jsize) -> Option<String> {
+    Some(
+        match jni_env.get_string(JString::from(
+            match jni_env.get_object_array_element(array.into_inner(), index) {
+                Ok(x) => x,
+                Err(_) => return None,
+            },
+        )) {
             Ok(x) => x,
             Err(_) => return None,
         }
-        .into_inner(),
-        ReleaseMode::NoCopyBack,
-    ) {
-        Ok(x) => x,
-        Err(_) => return None,
-    };
-
-    let size = arr.size().unwrap() as usize;
-
-    Some(unsafe { from_raw_parts(arr.as_ptr(), size).to_vec() })
+        .into(),
+    )
 }

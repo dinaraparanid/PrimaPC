@@ -5,7 +5,6 @@ extern crate once_cell;
 use crate::{
     entities::tracks::default_track::DefaultTrack,
     utils::{
-        extensions::string_ext::StringExt,
         params::PARAMS,
         track_order::{Comparator, Ord},
     },
@@ -65,32 +64,50 @@ impl AudioScanner {
 
             tracks.sort_by(|f, s| match track_order.comparator {
                 Comparator::Title => match track_order.order {
-                    Ord::Asc => String::from_jbyte_vec(f.get_title().unwrap().clone())
-                        .partial_cmp(&String::from_jbyte_vec(s.get_title().unwrap().clone()))
+                    Ord::Asc => f
+                        .get_title()
+                        .unwrap()
+                        .clone()
+                        .partial_cmp(&s.get_title().unwrap().clone())
                         .unwrap(),
 
-                    Ord::Desc => String::from_jbyte_vec(s.get_title().unwrap().clone())
-                        .partial_cmp(&String::from_jbyte_vec(f.get_title().unwrap().clone()))
+                    Ord::Desc => s
+                        .get_title()
+                        .unwrap()
+                        .clone()
+                        .partial_cmp(&f.get_title().unwrap().clone())
                         .unwrap(),
                 },
 
                 Comparator::Artist => match track_order.order {
-                    Ord::Asc => String::from_jbyte_vec(f.get_artist().unwrap().clone())
-                        .partial_cmp(&String::from_jbyte_vec(s.get_artist().unwrap().clone()))
+                    Ord::Asc => f
+                        .get_artist()
+                        .unwrap()
+                        .clone()
+                        .partial_cmp(&s.get_artist().unwrap().clone())
                         .unwrap(),
 
-                    Ord::Desc => String::from_jbyte_vec(s.get_artist().unwrap().clone())
-                        .partial_cmp(&String::from_jbyte_vec(f.get_artist().unwrap().clone()))
+                    Ord::Desc => s
+                        .get_artist()
+                        .unwrap()
+                        .clone()
+                        .partial_cmp(&f.get_artist().unwrap().clone())
                         .unwrap(),
                 },
 
                 Comparator::Album => match track_order.order {
-                    Ord::Asc => String::from_jbyte_vec(f.get_album().unwrap().clone())
-                        .partial_cmp(&String::from_jbyte_vec(s.get_album().unwrap().clone()))
+                    Ord::Asc => f
+                        .get_album()
+                        .unwrap()
+                        .clone()
+                        .partial_cmp(&s.get_album().unwrap().clone())
                         .unwrap(),
 
-                    Ord::Desc => String::from_jbyte_vec(s.get_album().unwrap().clone())
-                        .partial_cmp(&String::from_jbyte_vec(f.get_album().unwrap().clone()))
+                    Ord::Desc => s
+                        .get_album()
+                        .unwrap()
+                        .clone()
+                        .partial_cmp(&f.get_album().unwrap().clone())
                         .unwrap(),
                 },
 

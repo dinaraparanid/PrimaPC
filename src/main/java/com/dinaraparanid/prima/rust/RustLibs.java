@@ -116,9 +116,9 @@ public enum RustLibs {;
             }
 
             return new Object[]{
-                    tag.getFirst(FieldKey.TITLE).getBytes(StandardCharsets.UTF_8),
-                    tag.getFirst(FieldKey.ARTIST).getBytes(StandardCharsets.UTF_8),
-                    tag.getFirst(FieldKey.ALBUM).getBytes(StandardCharsets.UTF_8),
+                    tag.getFirst(FieldKey.TITLE),
+                    tag.getFirst(FieldKey.ARTIST),
+                    tag.getFirst(FieldKey.ALBUM),
                     (long) file.getAudioHeader().getTrackLength() * 1000L,
                     numberInAlbum
             };

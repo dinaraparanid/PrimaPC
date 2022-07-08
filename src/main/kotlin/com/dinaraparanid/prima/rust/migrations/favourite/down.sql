@@ -1,0 +1,3 @@
+DROP TABLE favourite_tracks
+DROP TABLE favourite_artists
+DROP TABLE favourite_playlists

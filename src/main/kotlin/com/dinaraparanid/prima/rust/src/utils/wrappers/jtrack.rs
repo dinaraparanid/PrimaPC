@@ -6,8 +6,12 @@ use chrono::{DateTime, Duration, Local};
 use os_str_bytes::{OsStrBytes, OsStringBytes};
 
 use crate::{
-    entities::tracks::default_track::DefaultTrack, utils::constants::NULL_CHARACTER,
-    utils::extensions::jni_env_ext::JNIEnvExt, TrackTrait,
+    entities::{
+        favourable::Favourable,
+        tracks::{default_track::DefaultTrack, favourite_track::FavouriteTrack},
+    },
+    utils::{constants::NULL_CHARACTER, extensions::jni_env_ext::JNIEnvExt},
+    TrackTrait,
 };
 
 use std::{
@@ -26,21 +30,21 @@ use jni::{
 
 #[derive(Clone, Debug)]
 pub struct JTrack {
-    title: Option<Vec<jbyte>>,
-    artist: Option<Vec<jbyte>>,
-    album: Option<Vec<jbyte>>,
+    title: Option<String>,
+    artist: Option<String>,
+    album: Option<String>,
     path: PathBuf,
     duration: Duration,
     add_date: DateTime<Local>,
-    number_in_album: i16,
+    number_in_album: jshort,
 }
 
 impl JTrack {
     #[inline]
     pub fn new(
-        title: Option<Vec<jbyte>>,
-        artist: Option<Vec<jbyte>>,
-        album: Option<Vec<jbyte>>,
+        title: Option<String>,
+        artist: Option<String>,
+        album: Option<String>,
         path: PathBuf,
         duration: Duration,
         add_date: DateTime<Local>,
@@ -92,44 +96,17 @@ impl JTrack {
     pub fn to_jobject<'a, 'b>(&'a self, jni_env: &'b JNIEnv) -> JObject<'b> {
         jni_env
             .new_object(
-                "com/dinaraparanid/prima/entities/Track",
-                "([B[B[B[BJS)V",
+                "com/dinaraparanid/prima/daos/Track",
+                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[BJS)V",
                 &[
                     JValue::Object(JObject::from(
-                        jni_env
-                            .byte_array_from_slice(
-                                self.get_title()
-                                    .unwrap()
-                                    .iter()
-                                    .map(|&jb| jb as u8)
-                                    .collect::<Vec<_>>()
-                                    .as_slice(),
-                            )
-                            .unwrap(),
+                        jni_env.new_string(self.get_title().unwrap()).unwrap(),
                     )),
                     JValue::Object(JObject::from(
-                        jni_env
-                            .byte_array_from_slice(
-                                self.get_artist()
-                                    .unwrap()
-                                    .iter()
-                                    .map(|&jb| jb as u8)
-                                    .collect::<Vec<_>>()
-                                    .as_slice(),
-                            )
-                            .unwrap(),
+                        jni_env.new_string(self.get_artist().unwrap()).unwrap(),
                     )),
                     JValue::Object(JObject::from(
-                        jni_env
-                            .byte_array_from_slice(
-                                self.get_album()
-                                    .unwrap()
-                                    .iter()
-                                    .map(|&jb| jb as u8)
-                                    .collect::<Vec<_>>()
-                                    .as_slice(),
-                            )
-                            .unwrap(),
+                        jni_env.new_string(self.get_album().unwrap()).unwrap(),
                     )),
                     JValue::Object(JObject::from(
                         jni_env
@@ -162,17 +139,17 @@ impl JTrack {
 
 impl TrackTrait for JTrack {
     #[inline]
-    fn get_title(&self) -> Option<&Vec<jbyte>> {
+    fn get_title(&self) -> Option<&String> {
         self.title.as_ref()
     }
 
     #[inline]
-    fn get_artist(&self) -> Option<&Vec<jbyte>> {
+    fn get_artist(&self) -> Option<&String> {
         self.artist.as_ref()
     }
 
     #[inline]
-    fn get_album(&self) -> Option<&Vec<jbyte>> {
+    fn get_album(&self) -> Option<&String> {
         self.album.as_ref()
     }
 
@@ -197,6 +174,39 @@ impl TrackTrait for JTrack {
     }
 }
 
+impl Favourable<FavouriteTrack> for JTrack {
+    #[inline]
+    fn to_favourable(&self) -> FavouriteTrack {
+        FavouriteTrack::new(
+            self.title.clone(),
+            self.artist.clone(),
+            self.album.clone(),
+            self.path.clone(),
+            self.duration,
+            self.add_date.clone(),
+            self.number_in_album,
+        )
+    }
+
+    #[inline]
+    fn into_favourable(self) -> FavouriteTrack {
+        FavouriteTrack::new(
+            self.title,
+            self.artist,
+            self.album,
+            self.path,
+            self.duration,
+            self.add_date,
+            self.number_in_album,
+        )
+    }
+
+    #[inline]
+    fn into_self(favourable: FavouriteTrack) -> Self {
+        favourable.into_jtrack()
+    }
+}
+
 impl PartialEq for JTrack {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
@@ -207,7 +217,7 @@ impl PartialEq for JTrack {
 impl From<DefaultTrack> for JTrack {
     #[inline]
     fn from(track: DefaultTrack) -> Self {
-        track.to_jtrack()
+        track.into_jtrack()
     }
 }
 
@@ -251,11 +261,7 @@ fn get_byte_vec_field_of_jtrack(
 }
 
 #[inline]
-fn get_string_field_of_jtrack(
-    jni_env: &JNIEnv,
-    jtrack: &JObject,
-    field: &str,
-) -> Option<Vec<jbyte>> {
+fn get_string_field_of_jtrack(jni_env: &JNIEnv, jtrack: &JObject, field: &str) -> Option<String> {
     let jstring = unsafe {
         match JNIEnvExt::get_field(
             jni_env,
@@ -275,8 +281,7 @@ fn get_string_field_of_jtrack(
         return None;
     }
 
-    let string: String = jni_env.get_string(JString::from(jstring)).unwrap().into();
-    Some(unsafe { from_raw_parts(string.as_ptr() as *const jbyte, string.len()).to_vec() })
+    Some(jni_env.get_string(JString::from(jstring)).unwrap().into())
 }
 
 #[inline]

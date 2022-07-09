@@ -173,4 +173,9 @@ impl DefaultTrack {
             PathBuf::from(path),
         )
     }
+
+    #[inline]
+    pub fn from_env(jni_env: &JNIEnv, jtrack: JObject) -> Self {
+        Self::from(JTrack::from_env(jni_env, jtrack))
+    }
 }

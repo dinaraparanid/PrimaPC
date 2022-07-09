@@ -2,12 +2,13 @@ extern crate chrono;
 extern crate jni;
 
 use crate::{
+    databases::favourites::daos::favourite_track_dao::FavouriteTrackDBEntity,
     entities::{favourable::Favourable, tracks::track_trait::TrackTrait},
-    utils::wrappers::jtrack::JTrack,
+    utils::{extensions::path_buf_ext::PathBufExt, wrappers::jtrack::JTrack},
     DefaultTrack,
 };
 
-use crate::databases::favourites::daos::favourite_track_dao::FavouriteTrackDBEntity;
+use crate::databases::db_entity::DBEntity;
 use chrono::{DateTime, Duration, Local};
 use jni::sys::jshort;
 use std::path::PathBuf;
@@ -60,6 +61,15 @@ impl TrackTrait for FavouriteTrack {
     }
 }
 
+impl DBEntity for FavouriteTrack {
+    type PrimaryKey = PathBuf;
+
+    #[inline]
+    fn get_key(&self) -> &PathBuf {
+        &self.path
+    }
+}
+
 impl PartialEq for FavouriteTrack {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
@@ -78,23 +88,6 @@ impl From<JTrack> for FavouriteTrack {
     #[inline]
     fn from(jtrack: JTrack) -> Self {
         jtrack.into_favourable()
-    }
-}
-
-impl From<FavouriteTrackDBEntity> for FavouriteTrack {
-    #[inline]
-    fn from(entity: FavouriteTrackDBEntity) -> Self {
-        let path = PathBuf::from(entity.path);
-
-        FavouriteTrack::new(
-            entity.title,
-            entity.artist,
-            entity.album,
-            path.clone(),
-            Duration::milliseconds(entity.duration),
-            DateTime::from(std::fs::metadata(path).unwrap().created().unwrap()),
-            entity.number_in_album as jshort,
-        )
     }
 }
 
@@ -144,5 +137,18 @@ impl FavouriteTrack {
             self.add_date,
             self.number_in_album,
         )
+    }
+
+    #[inline]
+    pub(crate) fn into_db_entity(self) -> FavouriteTrackDBEntity {
+        FavouriteTrackDBEntity {
+            title: self.title,
+            artist: self.artist,
+            album: self.album,
+            path: self.path.to_string(),
+            duration: self.duration.num_milliseconds(),
+            add_date: self.add_date.timestamp_millis(),
+            number_in_album: self.number_in_album as i32,
+        }
     }
 }

@@ -48,6 +48,7 @@ fun MainScreen() {
         val coroutineScope = rememberCoroutineScope()
         val currentTrackState: MutableState<Track?> = remember { mutableStateOf(null) }
         val playbackPositionState = remember { mutableStateOf(0F) }
+        val isLikedState = remember { mutableStateOf(false) }
 
         coroutineScope.launch {
             currentTrackState.value = withContext(Dispatchers.IO) {
@@ -55,6 +56,7 @@ fun MainScreen() {
             }
 
             playbackPositionState.value = RustLibs.getPlaybackPosition().toFloat()
+            isLikedState.value = currentTrackState.value?.let(RustLibs::isTrackLiked) ?: false
         }
 
         val isPlayingState = remember { mutableStateOf(false) }
@@ -96,7 +98,8 @@ fun MainScreen() {
                             isPlaybackTrackDraggingState,
                             loopingState,
                             speedState,
-                            volumeState
+                            volumeState,
+                            isLikedState
                         )
                     }
                 ) {

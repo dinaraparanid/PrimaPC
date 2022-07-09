@@ -96,7 +96,7 @@ impl JTrack {
     pub fn to_jobject<'a, 'b>(&'a self, jni_env: &'b JNIEnv) -> JObject<'b> {
         jni_env
             .new_object(
-                "com/dinaraparanid/prima/daos/Track",
+                "com/dinaraparanid/prima/entities/Track",
                 "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[BJS)V",
                 &[
                     JValue::Object(JObject::from(

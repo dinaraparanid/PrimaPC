@@ -17,13 +17,19 @@ pub mod utils;
 #[cfg(test)]
 mod tests;
 
+use diesel::RunQueryDsl;
 use futures::executor::block_on;
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use crate::{
     audio_player::audio_player::AUDIO_PLAYER,
     audio_scanner::AudioScanner,
+    databases::{
+        entity_dao::EntityDao,
+        favourites::{daos::favourite_track_dao::FavouriteTrackDao, db::establish_connection},
+    },
     entities::{
+        favourable::Favourable,
         playlists::{
             default_playlist::DefaultPlaylist, playlist_trait::PlaylistTrait,
             playlist_type::PlaylistType,
@@ -36,7 +42,6 @@ use crate::{
         params::PARAMS,
         storage_util::StorageUtil,
         track_order::{Comparator, Ord, TrackOrder},
-        wrappers::jtrack::JTrack,
     },
 };
 
@@ -56,6 +61,38 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_initRust(
         let jvm = &mut JVM.write().unwrap();
         jvm.jni_env = Arc::new(Some(env));
     }
+
+    let db_connection = establish_connection().unwrap();
+
+    diesel::sql_query(
+        r#"CREATE TABLE IF NOT EXISTS favourite_tracks (
+  title TEXT,
+  artist TEXT,
+  album TEXT,
+  path TEXT PRIMARY KEY NOT NULL,
+  duration BIGINT NOT NULL,
+  add_date BIGINT NOT NULL,
+  number_in_album INTEGER NOT NULL
+);"#,
+    )
+    .execute(&db_connection)
+    .unwrap_or_default();
+
+    diesel::sql_query(
+        "CREATE TABLE IF NOT EXISTS favourite_artists (name TEXT PRIMARY KEY NOT NULL)",
+    )
+    .execute(&db_connection)
+    .unwrap_or_default();
+
+    diesel::sql_query(
+        r#"CREATE TABLE IF NOT EXISTS favourite_playlists (
+  id INTEGER PRIMARY KEY,
+  title TEXT,
+  tp INTEGER NOT NULL
+)"#,
+    )
+    .execute(&db_connection)
+    .unwrap_or_default();
 }
 
 #[no_mangle]
@@ -81,14 +118,10 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracksBl
     let rust_tracks = block_on(AudioScanner::get_all_tracks());
     let rust_tracks = &*rust_tracks.lock().unwrap();
 
-    let java_track_class = env
-        .find_class("com/dinaraparanid/prima/daos/Track")
-        .unwrap();
-
     let java_tracks = env
         .new_object_array(
             rust_tracks.len() as jsize,
-            java_track_class,
+            "com/dinaraparanid/prima/entities/Track",
             JObject::null(),
         )
         .unwrap();
@@ -276,7 +309,7 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrack
             .unwrap()
             .iter()
             .unwrap()
-            .map(|jtrack| DefaultTrack::from(JTrack::from_env(&env, jtrack))),
+            .map(|jtrack| DefaultTrack::from_env(&env, jtrack)),
         track_index as usize,
     );
 
@@ -578,4 +611,33 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_storeCurPlayba
     _class: jclass,
 ) {
     unsafe { AUDIO_PLAYER.read().unwrap().save_cur_playback_pos_async() }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onLikeTrackClicked(
+    env: JNIEnv,
+    _class: jclass,
+    track: JObject,
+) {
+    let track = DefaultTrack::from_env(&env, track).into_favourable();
+    let connection = establish_connection().unwrap();
+
+    if FavouriteTrackDao::get_by_key(track.get_path().clone(), &connection).is_some() {
+        FavouriteTrackDao::remove(vec![track], &connection)
+    } else {
+        FavouriteTrackDao::insert(vec![track], &connection)
+    }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isTrackLiked(
+    env: JNIEnv,
+    _class: jclass,
+    track: JObject,
+) -> jboolean {
+    let track = DefaultTrack::from_env(&env, track);
+    let connection = establish_connection().unwrap();
+    jboolean::from(FavouriteTrackDao::get_by_key(track.get_path().clone(), &connection).is_some())
 }

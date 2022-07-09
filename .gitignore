@@ -1,4 +1,5 @@
 data.yaml
+*.db
 
 ### Java ###
 # Compiled class file

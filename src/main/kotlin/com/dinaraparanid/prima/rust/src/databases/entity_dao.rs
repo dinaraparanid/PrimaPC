@@ -1,12 +1,15 @@
+extern crate diesel;
+
 use crate::databases::db_entity::DBEntity;
+use diesel::SqliteConnection;
 
 pub trait EntityDao<PK, T>
 where
     T: DBEntity<PrimaryKey = PK>,
 {
-    fn get_all(&self) -> Vec<T>;
-    fn get_by_key(&self, key: PK) -> Option<T>;
-    fn insert(&self, entities: Vec<T>);
-    fn remove(&self, entities: Vec<T>);
-    fn update(&self, new_entities: Vec<T>);
+    fn get_all(conn: &SqliteConnection) -> Vec<T>;
+    fn get_by_key(key: PK, conn: &SqliteConnection) -> Option<T>;
+    fn insert(entities: Vec<T>, conn: &SqliteConnection);
+    fn remove(entities: Vec<T>, conn: &SqliteConnection);
+    fn update(new_entities: Vec<T>, conn: &SqliteConnection);
 }

@@ -91,6 +91,10 @@ public enum RustLibs {;
 
     public static final native void storeCurPlaybackPos();
 
+    public static final native void onLikeTrackClicked(@NotNull final Track track);
+
+    public static final native boolean isTrackLiked(@NotNull final Track track);
+
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;
     }

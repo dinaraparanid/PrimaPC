@@ -41,7 +41,8 @@ fun PlayingBar(
     isPlaybackTrackDraggingState: MutableState<Boolean>,
     loopingState: MutableState<Int>,
     speedState: MutableState<Float>,
-    volumeState: MutableState<Float>
+    volumeState: MutableState<Float>,
+    isLikedState: MutableState<Boolean>
 ) = BottomAppBar(
     modifier = Modifier.fillMaxWidth().height(150.dp),
     elevation = 10.dp
@@ -82,7 +83,8 @@ fun PlayingBar(
                 isPlayingState,
                 isPlaybackTrackDraggingState,
                 loopingState,
-                speedState
+                speedState,
+                isLikedState
             )
 
             Sliders(volumeState, speedState)
@@ -166,9 +168,9 @@ private fun ColumnScope.Buttons(
     isPlayingState: MutableState<Boolean>,
     isPlaybackTrackDraggingState: State<Boolean>,
     loopingState: MutableState<Int>,
-    speedState: State<Float>
+    speedState: State<Float>,
+    isLikedState: MutableState<Boolean>
 ) {
-    val isLikedState = remember { mutableStateOf(false) } // TODO: Load like status
     val coroutineScope = rememberCoroutineScope()
 
     Row(modifier = Modifier.width(500.dp).weight(1F).align(Alignment.CenterHorizontally)) {
@@ -180,7 +182,9 @@ private fun ColumnScope.Buttons(
             onClick = {
                 if (currentTrackState.value != null)
                     isLikedState.value = !isLikedState.value
-                // TODO: Like track
+
+                val curTrack = currentTrackState.value!!
+                coroutineScope.launch(Dispatchers.IO) { RustLibs.onLikeTrackClicked(curTrack) }
             }
         ) {
             Image(
@@ -405,7 +409,8 @@ private fun BoxScope.ButtonsAndTrack(
     isPlayingState: MutableState<Boolean>,
     isPlaybackTrackDraggingState: MutableState<Boolean>,
     loopingState: MutableState<Int>,
-    speedState: State<Float>
+    speedState: State<Float>,
+    isLikedState: MutableState<Boolean>
 ) = Surface(
     color = Color.Transparent,
     modifier = Modifier
@@ -422,7 +427,8 @@ private fun BoxScope.ButtonsAndTrack(
             isPlayingState,
             isPlaybackTrackDraggingState,
             loopingState,
-            speedState
+            speedState,
+            isLikedState
         )
 
         Spacer(modifier = Modifier.height(20.dp).weight(1F))
@@ -470,6 +476,8 @@ private fun Volume(volumeState: MutableState<Float>) = Row(modifier = Modifier.p
         onValueChangeFinished = { RustLibs.setVolume(volumeState.value) }
     )
 
+    Spacer(Modifier.width(5.dp))
+
     Text(
         text = volumeState.value.take(4),
         fontSize = 14.sp,
@@ -502,6 +510,8 @@ private fun Speed(speedState: MutableState<Float>) = Row(modifier = Modifier.pad
         },
         onValueChangeFinished = { RustLibs.setSpeed(speedState.value) }
     )
+
+    Spacer(Modifier.width(5.dp))
 
     Text(
         text = speedState.value.take(4),

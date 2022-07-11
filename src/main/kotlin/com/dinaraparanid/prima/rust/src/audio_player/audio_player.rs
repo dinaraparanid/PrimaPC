@@ -88,7 +88,6 @@ impl AudioPlayer {
                         if cur_dur > max_duration {
                             *position_clone.write().unwrap() = max_duration;
                             is_playing_clone.store(false, Ordering::SeqCst);
-                            println!("BEBRA {:?} {:?}", cur_dur, max_duration);
                             break;
                         }
 

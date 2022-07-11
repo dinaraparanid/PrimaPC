@@ -6,10 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Card
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -27,6 +24,7 @@ import com.dinaraparanid.prima.ui.startPlaybackControlTasks
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.extensions.correctUTF8
 import com.dinaraparanid.prima.utils.localization.Localization
+import com.dinaraparanid.prima.utils.localization.LocalizedString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -136,11 +134,16 @@ fun LazyItemScope.TrackItem(
 
                 Spacer(Modifier.width(20.dp).fillMaxHeight())
 
+                val textColor = when (track) {
+                    currentTrackState.value -> Params.primaryColor
+                    else -> Params.secondaryAlternativeColor
+                }
+
                 Column(modifier = Modifier.weight(1F).align(Alignment.CenterVertically)) {
                     Text(
                         text = track.title?.takeIf(String::isNotEmpty) ?: Localization.unknownTrack.resource,
                         fontSize = 18.sp,
-                        color = Params.secondaryAlternativeColor
+                        color = textColor
                     )
 
                     Text(
@@ -150,16 +153,16 @@ fun LazyItemScope.TrackItem(
                             track.album?.takeIf(String::isNotEmpty) ?: Localization.unknownAlbum.resource
                         }",
                         fontSize = 14.sp,
-                        color = Params.secondaryAlternativeColor
+                        color = textColor
                     )
                 }
 
                 Spacer(Modifier.width(20.dp).fillMaxHeight())
 
+                val isPopupMenuExpandedState = remember { mutableStateOf(false) }
+
                 Button(
-                    onClick = {
-                        // TODO: Track settings
-                    },
+                    onClick = { isPopupMenuExpandedState.value = true },
                     modifier = Modifier
                         .width(50.dp)
                         .fillMaxHeight()
@@ -174,8 +177,53 @@ fun LazyItemScope.TrackItem(
                         colorFilter = ColorFilter.tint(Params.primaryColor),
                         contentScale = ContentScale.Inside
                     )
+
+                    TrackSettingsMenu(isPopupMenuExpandedState)
                 }
             }
         }
     }
+}
+
+@Composable
+private fun TrackSettingsMenu(isPopupMenuExpandedState: MutableState<Boolean>) = DropdownMenu(
+    expanded = isPopupMenuExpandedState.value,
+    onDismissRequest = { isPopupMenuExpandedState.value = false }
+) {
+    TrackSettingsMenuItem(title = Localization.changeTrackInfo) {
+        // TODO: Change track's info
+    }
+
+    TrackSettingsMenuItem(title = Localization.addToQueue) {
+        // TODO: Add track to queue
+    }
+
+    TrackSettingsMenuItem(title = Localization.addToFavourites) {
+        // TODO: Add track to favourites
+    }
+
+    TrackSettingsMenuItem(title = Localization.removeTrack) {
+        // TODO: Remove track
+    }
+
+    TrackSettingsMenuItem(title = Localization.lyrics) {
+        // TODO: Show lyrics
+    }
+
+    TrackSettingsMenuItem(title = Localization.trackInformation) {
+        // TODO: Show track's information
+    }
+
+    TrackSettingsMenuItem(title = Localization.trimTrack) {
+        // TODO: trim track
+    }
+
+    TrackSettingsMenuItem(title = Localization.hideTrack) {
+        // TODO: hide track
+    }
+}
+
+@Composable
+private fun TrackSettingsMenuItem(title: LocalizedString, onClick: () -> Unit) = DropdownMenuItem(onClick) {
+    Text(text = title.resource, fontSize = 14.sp, color = Params.secondaryAlternativeColor)
 }

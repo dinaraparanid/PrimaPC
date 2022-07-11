@@ -21,6 +21,7 @@ import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.ui.tracks.scanTracks
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.localization.Localization
+import com.dinaraparanid.prima.utils.localization.LocalizedString
 import kotlinx.coroutines.launch
 
 @Composable
@@ -210,13 +211,13 @@ private fun SearchByParamsMenu(isPopupMenuExpandedState: MutableState<Boolean>) 
     expanded = isPopupMenuExpandedState.value,
     onDismissRequest = { isPopupMenuExpandedState.value = false }
 ) {
-    SearchByParamsMenuItem(Params.TracksSearchOrder.TITLE, Localization.byTitle.resource)
-    SearchByParamsMenuItem(Params.TracksSearchOrder.ARTIST, Localization.byArtist.resource)
-    SearchByParamsMenuItem(Params.TracksSearchOrder.ALBUM, Localization.byAlbum.resource)
+    SearchByParamsMenuItem(Params.TracksSearchOrder.TITLE, Localization.byTitle)
+    SearchByParamsMenuItem(Params.TracksSearchOrder.ARTIST, Localization.byArtist)
+    SearchByParamsMenuItem(Params.TracksSearchOrder.ALBUM, Localization.byAlbum)
 }
 
 @Composable
-private fun SearchByParamsMenuItem(order: Params.TracksSearchOrder, title: String) {
+private fun SearchByParamsMenuItem(order: Params.TracksSearchOrder, title: LocalizedString) {
     val isCheckedState = remember { mutableStateOf(order in Params.tracksSearchOrder) }
 
     DropdownMenuItem(
@@ -239,6 +240,6 @@ private fun SearchByParamsMenuItem(order: Params.TracksSearchOrder, title: Strin
             )
         )
 
-        Text(text = title, fontSize = 14.sp, color = Params.secondaryAlternativeColor)
+        Text(text = title.resource, fontSize = 14.sp, color = Params.secondaryAlternativeColor)
     }
 }

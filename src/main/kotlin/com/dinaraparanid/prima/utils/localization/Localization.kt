@@ -203,4 +203,68 @@ object Localization {
         be = "Парадак трэкаў",
         zh = "追踪订单"
     )
+
+    @JvmField
+    val changeTrackInfo = resource(
+        en = "Change track's information",
+        ru = "Изменить информацию о треке",
+        be = "Змяніць інфармацыю аб трэку",
+        zh = "更改轨道信息"
+    )
+
+    @JvmField
+    val addToQueue = resource(
+        en = "Add to queue (or remove)",
+        ru = "Добавить в очередь (или убрать)",
+        be = "Дадаць у чаргу (або прыбраць)",
+        zh = "添加到队列（或删除）"
+    )
+
+    @JvmField
+    val addToFavourites = resource(
+        en = "Add to favourites (or remove)",
+        ru = "Добавить в любимое (или убрать)",
+        be = "Дадаць у любімае (або прыбраць)",
+        zh = "添加到收藏夹（或删除）"
+    )
+
+    @JvmField
+    val removeTrack = resource(
+        en = "Remove track",
+        ru = "Удалить трек",
+        be = "Выдаліць трэк",
+        zh = "删除曲目"
+    )
+
+    @JvmField
+    val lyrics = resource(
+        en = "Lyrics",
+        ru = "Текст трека",
+        be = "Тэкст трэка",
+        zh = "歌词"
+    )
+
+    @JvmField
+    val trackInformation = resource(
+        en = "Track's information",
+        ru = "Информация о треке",
+        be = "Інфармацыя аб трэку",
+        zh = "追踪资料"
+    )
+
+    @JvmField
+    val trimTrack = resource(
+        en = "Trim track",
+        ru = "Обрезать трек",
+        be = "Абрэзаць трэк",
+        zh = "裁剪轨道"
+    )
+
+    @JvmField
+    val hideTrack = resource(
+        en = "Hide track",
+        ru = "Спрятать трек",
+        be = "Схаваць трэк",
+        zh = "隐藏轨道"
+    )
 }

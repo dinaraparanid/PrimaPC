@@ -238,59 +238,79 @@ fn has_cur_track() -> bool {
 }
 
 #[inline]
-fn play_pause_cur_track() {
-    let (path, duration) = get_path_and_duration_of_cur_track();
-    let is_playing = unsafe { AUDIO_PLAYER.read().unwrap().is_playing() };
+fn set_cur_playlist(playlist: DefaultPlaylist<DefaultTrack>) {
+    unsafe {
+        *PARAMS
+            .write()
+            .unwrap()
+            .as_mut()
+            .unwrap()
+            .get_cur_playlist_mut() = playlist;
+    }
+}
+
+#[inline]
+unsafe fn play_pause_cur_track(playlist: Option<DefaultPlaylist<DefaultTrack>>) {
+    let cur_track = playlist.as_ref().map(|p| p.get_cur_track()).flatten();
+    let is_playing = AUDIO_PLAYER.read().unwrap().is_playing();
 
     if is_playing {
-        unsafe {
-            AUDIO_PLAYER.write().unwrap().stop();
+        AUDIO_PLAYER.write().unwrap().stop();
+
+        if playlist.is_none() {
+            AUDIO_PLAYER.write().unwrap().pause();
+            return;
         }
 
-        if unsafe {
-            AUDIO_PLAYER
-                .read()
-                .unwrap()
-                .get_cur_path()
-                .unwrap()
-                .eq(&path)
+        if {
+            let params = PARAMS.read().unwrap();
+            let prev_track = params.as_ref().unwrap().get_cur_playlist().get_cur_track();
+            prev_track.unwrap() == cur_track.unwrap()
         } {
-            unsafe { AUDIO_PLAYER.write().unwrap().pause() }
+            set_cur_playlist(playlist.unwrap());
+            AUDIO_PLAYER.write().unwrap().pause()
         } else {
-            block_on(unsafe { AUDIO_PLAYER.write().unwrap().play(path, duration) })
+            set_cur_playlist(playlist.unwrap());
+            let (path, track_duration) = get_path_and_duration_of_cur_track();
+            block_on(AUDIO_PLAYER.write().unwrap().play(path, track_duration))
         }
+        return;
+    }
+
+    if {
+        PARAMS
+            .read()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .get_cur_playlist()
+            .get_cur_track()
+            .is_none()
+    } {
+        set_cur_playlist(playlist.unwrap());
+        let (path, track_duration) = get_path_and_duration_of_cur_track();
+        block_on(AUDIO_PLAYER.write().unwrap().play(path, track_duration));
+        return;
+    }
+
+    if playlist.is_none() {
+        let (_, track_duration) = get_path_and_duration_of_cur_track();
+        AUDIO_PLAYER.write().unwrap().resume(track_duration);
+        return;
+    }
+
+    if {
+        let params = PARAMS.read().unwrap();
+        let prev_track = params.as_ref().unwrap().get_cur_playlist().get_cur_track();
+        prev_track.unwrap() == cur_track.unwrap()
+    } {
+        set_cur_playlist(playlist.unwrap());
+        let (_, track_duration) = get_path_and_duration_of_cur_track();
+        AUDIO_PLAYER.write().unwrap().resume(track_duration)
     } else {
-        if unsafe { AUDIO_PLAYER.read().unwrap().get_cur_path().is_none() } {
-            if unsafe {
-                PARAMS
-                    .read()
-                    .unwrap()
-                    .as_ref()
-                    .unwrap()
-                    .get_cur_playlist()
-                    .get_cur_track()
-                    .is_none()
-            } {
-                block_on(unsafe { AUDIO_PLAYER.write().unwrap().play(path, duration) })
-            } else {
-                unsafe { AUDIO_PLAYER.write().unwrap().resume(duration) }
-            }
-        } else {
-            if {
-                unsafe {
-                    AUDIO_PLAYER
-                        .read()
-                        .unwrap()
-                        .get_cur_path()
-                        .unwrap()
-                        .eq(&path)
-                }
-            } {
-                unsafe { AUDIO_PLAYER.write().unwrap().resume(duration) }
-            } else {
-                block_on(unsafe { AUDIO_PLAYER.write().unwrap().play(path, duration) })
-            }
-        }
+        set_cur_playlist(playlist.unwrap());
+        let (path, track_duration) = get_path_and_duration_of_cur_track();
+        block_on(AUDIO_PLAYER.write().unwrap().play(path, track_duration))
     }
 }
 
@@ -313,25 +333,18 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrack
         track_index as usize,
     );
 
-    *PARAMS
-        .write()
-        .unwrap()
-        .as_mut()
-        .unwrap()
-        .get_cur_playlist_mut() = playlist.clone();
-
-    StorageUtil::store_current_playlist(playlist).unwrap_or_default();
-    play_pause_cur_track()
+    StorageUtil::store_current_playlist(playlist.clone()).unwrap_or_default();
+    play_pause_cur_track(Some(playlist))
 }
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPlayButtonClickedBlocking(
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPlayButtonClickedBlocking(
     _env: JNIEnv,
     _class: jclass,
 ) {
     if has_cur_track() {
-        play_pause_cur_track()
+        unsafe { play_pause_cur_track(None) }
     }
 }
 

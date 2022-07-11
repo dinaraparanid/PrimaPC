@@ -170,7 +170,7 @@ private fun TrackOrderMenuItem(
         onClick = {
             if (!isChecked) {
                 when (order) {
-                    in 0..3 -> trackOrdState[0] = order
+                    in 0..4 -> trackOrdState[0] = order
                     else -> trackOrdState[1] = order
                 }
 
@@ -184,7 +184,7 @@ private fun TrackOrderMenuItem(
             onCheckedChange = {
                 if (!isChecked) {
                     when (order) {
-                        in 0..3 -> trackOrdState[0] = order
+                        in 0..4 -> trackOrdState[0] = order
                         else -> trackOrdState[1] = order
                     }
 

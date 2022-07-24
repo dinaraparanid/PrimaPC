@@ -1,4 +1,4 @@
-package com.dinaraparanid.prima.ui.tracks
+package com.dinaraparanid.prima.ui.fragments.main_menu_fragments.tracks
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*

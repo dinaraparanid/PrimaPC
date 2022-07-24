@@ -1,4 +1,4 @@
-package com.dinaraparanid.prima.ui.tracks.appbar
+package com.dinaraparanid.prima.ui.fragments.main_menu_fragments.tracks
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,27 +18,26 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dinaraparanid.prima.entities.Track
-import com.dinaraparanid.prima.ui.tracks.scanTracks
+import com.dinaraparanid.prima.ui.tracks.SearchByParamsMenu
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.localization.Localization
-import com.dinaraparanid.prima.utils.localization.LocalizedString
 import kotlinx.coroutines.launch
 
 @Composable
-fun TracksAppBar(tracksState: SnapshotStateList<Track>, filteredTracksState: SnapshotStateList<Track>) {
+fun TracksAppBar(allTracksState: SnapshotStateList<Track>, filteredAllTracksState: SnapshotStateList<Track>) {
     val isSearchingState = remember { mutableStateOf(false) }
 
     when {
         isSearchingState.value -> SearchAppBar(
-            tracksState,
-            filteredTracksState,
+            allTracksState,
+            filteredAllTracksState,
             isSearchingState,
             onTextChanged = { q ->
                 val query = q.lowercase()
 
-                filteredTracksState.run {
+                filteredAllTracksState.run {
                     clear()
-                    addAll(tracksState.filter {
+                    addAll(allTracksState.filter {
                         val ord = Params.tracksSearchOrder
 
                         if (Params.TracksSearchOrder.TITLE in ord && it.title?.lowercase()?.contains(query) == true)
@@ -53,7 +52,7 @@ fun TracksAppBar(tracksState: SnapshotStateList<Track>, filteredTracksState: Sna
             },
         )
 
-        else -> DefaultAppBar(isSearchingState, tracksState, filteredTracksState)
+        else -> DefaultAppBar(isSearchingState, allTracksState, filteredAllTracksState)
     }
 }
 
@@ -151,7 +150,7 @@ private fun DefaultAppBar(
             Spacer(modifier = Modifier.width(40.dp).fillMaxHeight())
 
             Text(
-                text = Params.mainLabel,
+                text = Localization.tracks.resource,
                 fontSize = 22.sp,
                 color = Params.secondaryAlternativeColor,
                 modifier = Modifier.align(Alignment.CenterVertically)
@@ -203,43 +202,5 @@ private fun DefaultAppBar(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SearchByParamsMenu(isPopupMenuExpandedState: MutableState<Boolean>) = DropdownMenu(
-    expanded = isPopupMenuExpandedState.value,
-    onDismissRequest = { isPopupMenuExpandedState.value = false }
-) {
-    SearchByParamsMenuItem(Params.TracksSearchOrder.TITLE, Localization.byTitle)
-    SearchByParamsMenuItem(Params.TracksSearchOrder.ARTIST, Localization.byArtist)
-    SearchByParamsMenuItem(Params.TracksSearchOrder.ALBUM, Localization.byAlbum)
-}
-
-@Composable
-private fun SearchByParamsMenuItem(order: Params.TracksSearchOrder, title: LocalizedString) {
-    val isCheckedState = remember { mutableStateOf(order in Params.tracksSearchOrder) }
-
-    DropdownMenuItem(
-        onClick = {
-            Params.updateTrackSearchOrder(order)
-            isCheckedState.value = !isCheckedState.value
-        }
-    ) {
-        Checkbox(
-            checked = isCheckedState.value,
-            onCheckedChange = {
-                Params.updateTrackSearchOrder(order)
-                isCheckedState.value = !isCheckedState.value
-            },
-            colors = CheckboxDefaults.colors(
-                checkedColor = Params.primaryColor,
-                checkmarkColor = Params.secondaryColor,
-                uncheckedColor = Params.secondaryAlternativeColor,
-                disabledColor = Params.secondaryAlternativeColor
-            )
-        )
-
-        Text(text = title.resource, fontSize = 14.sp, color = Params.secondaryAlternativeColor)
     }
 }

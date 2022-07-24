@@ -9,7 +9,8 @@ import com.arkivanov.decompose.extensions.compose.jetbrains.Children
 import com.arkivanov.decompose.extensions.compose.jetbrains.animation.child.childAnimation
 import com.arkivanov.decompose.extensions.compose.jetbrains.animation.child.fade
 import com.dinaraparanid.prima.entities.Track
-import com.dinaraparanid.prima.ui.tracks.Tracks
+import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.tracks.TracksFragment
+import com.dinaraparanid.prima.ui.fragments.playbar_fragments.current_playlist.CurrentPlaylistFragment
 
 @OptIn(ExperimentalDecomposeApi::class)
 @Composable
@@ -20,8 +21,10 @@ fun RootView(
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
-    tracksState: SnapshotStateList<Track>,
-    filteredTracksState: SnapshotStateList<Track>,
+    allTracksState: SnapshotStateList<Track>,
+    filteredAllTracksState: SnapshotStateList<Track>,
+    currentPlaylistTracksState: SnapshotStateList<Track>,
+    currentPlaylistFilteredTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>
 ) = Children(
@@ -29,14 +32,26 @@ fun RootView(
     animation = childAnimation(fade())
 ) {
     when (it.instance) {
-        ScreenElement.Screen.MainMenuScreen.Tracks -> Tracks(
+        ScreenElement.Screen.MainMenuScreen.Tracks -> TracksFragment(
             currentTrackState,
             isPlayingState,
             isPlayingCoverLoadedState,
             playbackPositionState,
             loopingState,
-            tracksState,
-            filteredTracksState,
+            allTracksState,
+            filteredAllTracksState,
+            isPlaybackTrackDraggingState,
+            speedState
+        )
+
+        ScreenElement.Screen.PlaybarScreen.CurrentPlaylist -> CurrentPlaylistFragment(
+            currentPlaylistTracksState,
+            currentPlaylistFilteredTracksState,
+            currentTrackState,
+            isPlayingState,
+            isPlayingCoverLoadedState,
+            playbackPositionState,
+            loopingState,
             isPlaybackTrackDraggingState,
             speedState
         )
@@ -55,7 +70,6 @@ fun RootView(
         ScreenElement.Screen.FavouritesScreen.Tracks -> Unit
         ScreenElement.Screen.GTMScreen.AboutGame -> Unit
         ScreenElement.Screen.GTMScreen.Game -> Unit
-        ScreenElement.Screen.PlaybarScreen.CurrentPlaylist -> Unit
         ScreenElement.Screen.PlaybarScreen.Equalizer -> Unit
         ScreenElement.Screen.SettingsScreen.FilesLocation -> Unit
         ScreenElement.Screen.SettingsScreen.Fonts -> Unit

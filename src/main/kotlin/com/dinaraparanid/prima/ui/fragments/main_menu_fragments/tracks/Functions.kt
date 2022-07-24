@@ -1,4 +1,4 @@
-package com.dinaraparanid.prima.ui.tracks
+package com.dinaraparanid.prima.ui.fragments.main_menu_fragments.tracks
 
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.dinaraparanid.prima.entities.Track

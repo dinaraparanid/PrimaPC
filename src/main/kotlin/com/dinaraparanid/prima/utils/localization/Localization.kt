@@ -267,4 +267,12 @@ object Localization {
         be = "Схаваць трэк",
         zh = "隐藏轨道"
     )
+
+    @JvmField
+    val currentTrack = resource(
+        en = "Current Playlist",
+        ru = "Текущий плейлист",
+        be = "Бягучы плэйліст",
+        zh = "当前播放列表"
+    )
 }

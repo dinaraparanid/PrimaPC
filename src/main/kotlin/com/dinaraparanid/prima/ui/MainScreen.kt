@@ -16,7 +16,8 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
-import com.dinaraparanid.prima.ui.tracks.appbar.TracksAppBar
+import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.tracks.TracksAppBar
+import com.dinaraparanid.prima.ui.fragments.playbar_fragments.current_playlist.CurrentPlaylistAppBar
 import com.dinaraparanid.prima.ui.utils.navigation.Config
 import com.dinaraparanid.prima.ui.utils.navigation.RootScreen
 import com.dinaraparanid.prima.ui.utils.navigation.RootView
@@ -67,8 +68,13 @@ fun MainScreen() {
         val speedState = remember { mutableStateOf(RustLibs.getSpeed()) }
         val volumeState = remember { mutableStateOf(RustLibs.getVolume()) }
 
-        val tracksState = remember { mutableStateListOf<Track>() }
-        val filteredTracksState = remember { mutableStateListOf<Track>() }
+        // All tracks
+        val allTracksState = remember { mutableStateListOf<Track>() }
+        val filteredAllTracksState = remember { mutableStateListOf<Track>() }
+
+        // Current Playlist
+        val currentPlaylistTracksState = mutableStateListOf<Track>()
+        val currentPlaylistFilteredTracksState = mutableStateListOf<Track>()
 
         val rootScreen = RootScreen(DefaultComponentContext(LifecycleRegistry())).apply { start() }
 
@@ -76,8 +82,15 @@ fun MainScreen() {
             Column(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
                     topBar = {
-                        // TODO: other app bars
                         when (rootScreen.currentConfigState.value) {
+                            Config.MainMenuConfig.Tracks -> TracksAppBar(allTracksState, filteredAllTracksState)
+
+                            Config.PlaybarConfig.CurrentPlaylist -> CurrentPlaylistAppBar(
+                                currentPlaylistTracksState,
+                                currentPlaylistFilteredTracksState
+                            )
+
+                            // TODO: other app bars
                             Config.FavouritesConfig.Artists -> Unit
                             Config.FavouritesConfig.TrackCollections -> Unit
                             Config.FavouritesConfig.Tracks -> Unit
@@ -91,14 +104,12 @@ fun MainScreen() {
                             Config.MainMenuConfig.Settings -> Unit
                             Config.MainMenuConfig.Statistics -> Unit
                             Config.MainMenuConfig.TrackCollections -> Unit
-                            Config.MainMenuConfig.Tracks -> TracksAppBar(tracksState, filteredTracksState)
-                            Config.PlaybarConfig.CurrentPlaylist -> TracksAppBar(tracksState, filteredTracksState)
                             Config.PlaybarConfig.Equalizer -> Unit
+                            Config.PlaybarConfig.TrimTrack -> Unit
                             Config.SettingsConfig.FilesLocation -> Unit
                             Config.SettingsConfig.Fonts -> Unit
                             Config.SettingsConfig.HiddenTracks -> Unit
                             Config.SettingsConfig.Themes -> Unit
-                            Config.PlaybarConfig.TrimTrack -> Unit
                             Config.StatisticsConfig.AllTime -> Unit
                             Config.StatisticsConfig.Day -> Unit
                             Config.StatisticsConfig.Weak -> Unit
@@ -110,7 +121,7 @@ fun MainScreen() {
                     bottomBar = {
                         PlayingBar(
                             rootScreen,
-                            tracksState,
+                            allTracksState,
                             currentTrackState,
                             isPlayingCoverLoadedState,
                             playbackPositionState,
@@ -135,8 +146,10 @@ fun MainScreen() {
                             isPlayingCoverLoadedState,
                             playbackPositionState,
                             loopingState,
-                            tracksState,
-                            filteredTracksState,
+                            allTracksState,
+                            filteredAllTracksState,
+                            currentPlaylistTracksState,
+                            currentPlaylistFilteredTracksState,
                             isPlaybackTrackDraggingState,
                             speedState
                         )
@@ -155,7 +168,7 @@ suspend fun startPlaybackControlTasks(
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
-    tracksState: SnapshotStateList<Track>,
+    allTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>
 ): Unit = coroutineScope {
@@ -172,7 +185,7 @@ suspend fun startPlaybackControlTasks(
                 isPlayingCoverLoadedState,
                 playbackPositionState,
                 loopingState,
-                tracksState,
+                allTracksState,
                 isPlaybackTrackDraggingState,
                 speedState
             )
@@ -201,7 +214,7 @@ suspend fun switchToNextTrack(
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
-    tracksState: SnapshotStateList<Track>,
+    allTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>
 ) = coroutineScope {
@@ -218,7 +231,7 @@ suspend fun switchToNextTrack(
             isPlayingCoverLoadedState,
             playbackPositionState,
             loopingState,
-            tracksState,
+            allTracksState,
             isPlaybackTrackDraggingState,
             speedState
         )
@@ -231,7 +244,7 @@ private suspend fun replayCurrentTrack(
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
-    tracksState: SnapshotStateList<Track>,
+    allTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>
 ) = coroutineScope {
@@ -244,7 +257,7 @@ private suspend fun replayCurrentTrack(
             isPlayingCoverLoadedState,
             playbackPositionState,
             loopingState,
-            tracksState,
+            allTracksState,
             isPlaybackTrackDraggingState,
             speedState
         )
@@ -257,7 +270,7 @@ suspend fun onPlaybackCompletition(
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
-    tracksState: SnapshotStateList<Track>,
+    allTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>
 ) = coroutineScope {
@@ -272,7 +285,7 @@ suspend fun onPlaybackCompletition(
                 isPlayingCoverLoadedState,
                 playbackPositionState,
                 loopingState,
-                tracksState,
+                allTracksState,
                 isPlaybackTrackDraggingState,
                 speedState
             )
@@ -284,7 +297,7 @@ suspend fun onPlaybackCompletition(
                 isPlayingCoverLoadedState,
                 playbackPositionState,
                 loopingState,
-                tracksState,
+                allTracksState,
                 isPlaybackTrackDraggingState,
                 speedState
             )
@@ -292,7 +305,7 @@ suspend fun onPlaybackCompletition(
             // No looping
             else -> launch(Dispatchers.IO) {
                 when {
-                    RustLibs.getCurTrackIndexBlocking() == tracksState.size - 1 -> {
+                    RustLibs.getCurTrackIndexBlocking() == allTracksState.size - 1 -> {
                         isPlayingState.value = false
 
                         launch(Dispatchers.IO) {
@@ -307,7 +320,7 @@ suspend fun onPlaybackCompletition(
                         isPlayingCoverLoadedState,
                         playbackPositionState,
                         loopingState,
-                        tracksState,
+                        allTracksState,
                         isPlaybackTrackDraggingState,
                         speedState
                     )

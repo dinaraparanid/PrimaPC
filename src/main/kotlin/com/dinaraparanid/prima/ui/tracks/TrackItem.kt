@@ -35,18 +35,18 @@ import java.io.File
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 fun LazyItemScope.TrackItem(
-    tracks: List<Track>,
+    tracksOnScreen: List<Track>,
     index: Int,
     currentTrackState: MutableState<Track?>,
     isPlayingState: MutableState<Boolean>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
-    tracksState: SnapshotStateList<Track>,
+    allTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>
 ) {
-    val track = tracks[index]
+    val track = tracksOnScreen[index]
     val coroutineScope = rememberCoroutineScope()
     val isCoverLoadedState = remember { mutableStateOf(false) }
     val coverState = remember { mutableStateOf(ImageBitmap(0, 0)) }
@@ -88,7 +88,7 @@ fun LazyItemScope.TrackItem(
                 }
 
                 coroutineScope.launch(Dispatchers.IO) {
-                    RustLibs.onTrackClickedBlocking(tracks, index)
+                    RustLibs.onTrackClickedBlocking(tracksOnScreen, index)
 
                     when {
                         isPlayingState.value -> coroutineScope.launch {
@@ -98,7 +98,7 @@ fun LazyItemScope.TrackItem(
                                 isPlayingCoverLoadedState,
                                 playbackPositionState,
                                 loopingState,
-                                tracksState,
+                                allTracksState,
                                 isPlaybackTrackDraggingState,
                                 speedState
                             )

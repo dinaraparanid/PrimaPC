@@ -1,12 +1,11 @@
 package com.dinaraparanid.prima.utils
 
 import androidx.compose.ui.graphics.Color
-import com.dinaraparanid.prima.utils.localization.Localization
 
 object Params {
     enum class Language { EN, RU, BE, ZH }
 
-    enum class Screens {
+    enum class StartScreens {
         TRACKS,
         PLAYLISTS,
         ARTISTS,
@@ -30,10 +29,7 @@ object Params {
     val secondaryAlternativeColor = if (theme.isNight) Color.White else Color(22, 21, 25)
 
     @JvmField
-    val mainLabel = Localization.tracks.resource // TODO: Load main label
-
-    @JvmField
-    val currentScreen = Screens.TRACKS // TODO: Load cur screen
+    val startScreen = StartScreens.TRACKS // TODO: Load start screen
 
     @JvmField
     val tracksSearchOrder = hashSetOf(

@@ -7,7 +7,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public enum RustLibs {;
@@ -47,7 +46,7 @@ public enum RustLibs {;
 
     public static final native void onPreviousTrackClickedBlocking();
 
-    public static final native void replayCurrentTrackBlocking();
+    public static final native void replayCurTrackBlocking();
 
     public static final native long getPlaybackPosition();
 
@@ -94,6 +93,9 @@ public enum RustLibs {;
     public static final native void onLikeTrackClicked(@NotNull final Track track);
 
     public static final native boolean isTrackLiked(@NotNull final Track track);
+
+    @Nullable
+    public static final native Track[] getCurPlaylist();
 
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;

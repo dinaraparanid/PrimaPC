@@ -50,5 +50,23 @@ fun RootView(
         ScreenElement.Screen.MainMenuScreen.GTM -> Unit
         ScreenElement.Screen.MainMenuScreen.Statistics -> Unit
         ScreenElement.Screen.MainMenuScreen.Settings -> Unit
+        ScreenElement.Screen.FavouritesScreen.Artists -> Unit
+        ScreenElement.Screen.FavouritesScreen.TrackCollections -> Unit
+        ScreenElement.Screen.FavouritesScreen.Tracks -> Unit
+        ScreenElement.Screen.GTMScreen.AboutGame -> Unit
+        ScreenElement.Screen.GTMScreen.Game -> Unit
+        ScreenElement.Screen.PlaybarScreen.CurrentPlaylist -> Unit
+        ScreenElement.Screen.PlaybarScreen.Equalizer -> Unit
+        ScreenElement.Screen.SettingsScreen.FilesLocation -> Unit
+        ScreenElement.Screen.SettingsScreen.Fonts -> Unit
+        ScreenElement.Screen.SettingsScreen.HiddenTracks -> Unit
+        ScreenElement.Screen.SettingsScreen.Themes -> Unit
+        ScreenElement.Screen.PlaybarScreen.TrimTrack -> Unit
+        ScreenElement.Screen.StatisticsScreen.AllTime -> Unit
+        ScreenElement.Screen.StatisticsScreen.Day -> Unit
+        ScreenElement.Screen.StatisticsScreen.Weak -> Unit
+        ScreenElement.Screen.StatisticsScreen.Year -> Unit
+        ScreenElement.Screen.TrackCollectionsScreen.Albums -> Unit
+        ScreenElement.Screen.TrackCollectionsScreen.CustomPlaylists -> Unit
     }
 }

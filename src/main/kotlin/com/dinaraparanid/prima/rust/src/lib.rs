@@ -45,6 +45,7 @@ use crate::{
     },
 };
 
+use crate::utils::extensions::playlist_ext::PlaylistExt;
 use jni::{
     objects::{JList, JObject, JString},
     sys::*,
@@ -474,7 +475,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isPlaying(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_replayCurrentTrackBlocking(
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_replayCurTrackBlocking(
     _env: JNIEnv,
     _class: jclass,
 ) {
@@ -653,4 +654,22 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isTrackLiked(
     let track = DefaultTrack::from_env(&env, track);
     let connection = establish_connection().unwrap();
     jboolean::from(FavouriteTrackDao::get_by_key(track.get_path().clone(), &connection).is_some())
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurPlaylist(
+    env: JNIEnv,
+    _class: jclass,
+) -> jobjectArray {
+    unsafe {
+        PARAMS
+            .read()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .get_cur_playlist()
+            .clone()
+            .into_jobject_array(&env)
+    }
 }

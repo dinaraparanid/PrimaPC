@@ -17,6 +17,7 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
 import com.dinaraparanid.prima.ui.tracks.appbar.TracksAppBar
+import com.dinaraparanid.prima.ui.utils.navigation.Config
 import com.dinaraparanid.prima.ui.utils.navigation.RootScreen
 import com.dinaraparanid.prima.ui.utils.navigation.RootView
 import com.dinaraparanid.prima.utils.Params
@@ -77,19 +78,38 @@ fun MainScreen() {
                     topBar = {
                         // TODO: other app bars
                         when (rootScreen.currentConfigState.value) {
-                            RootScreen.Config.Tracks -> TracksAppBar(tracksState, filteredTracksState)
-                            RootScreen.Config.TrackCollections -> Unit
-                            RootScreen.Config.Artists -> Unit
-                            RootScreen.Config.Favourites -> Unit
-                            RootScreen.Config.MP3Converter -> Unit
-                            RootScreen.Config.GTM -> Unit
-                            RootScreen.Config.Statistics -> Unit
-                            RootScreen.Config.Settings -> Unit
-                            RootScreen.Config.AboutApp -> Unit
+                            Config.FavouritesConfig.Artists -> Unit
+                            Config.FavouritesConfig.TrackCollections -> Unit
+                            Config.FavouritesConfig.Tracks -> Unit
+                            Config.GTMConfig.AboutGame -> Unit
+                            Config.GTMConfig.Game -> Unit
+                            Config.MainMenuConfig.AboutApp -> Unit
+                            Config.MainMenuConfig.Artists -> Unit
+                            Config.MainMenuConfig.Favourites -> Unit
+                            Config.MainMenuConfig.GTM -> Unit
+                            Config.MainMenuConfig.MP3Converter -> Unit
+                            Config.MainMenuConfig.Settings -> Unit
+                            Config.MainMenuConfig.Statistics -> Unit
+                            Config.MainMenuConfig.TrackCollections -> Unit
+                            Config.MainMenuConfig.Tracks -> TracksAppBar(tracksState, filteredTracksState)
+                            Config.PlaybarConfig.CurrentPlaylist -> TracksAppBar(tracksState, filteredTracksState)
+                            Config.PlaybarConfig.Equalizer -> Unit
+                            Config.SettingsConfig.FilesLocation -> Unit
+                            Config.SettingsConfig.Fonts -> Unit
+                            Config.SettingsConfig.HiddenTracks -> Unit
+                            Config.SettingsConfig.Themes -> Unit
+                            Config.PlaybarConfig.TrimTrack -> Unit
+                            Config.StatisticsConfig.AllTime -> Unit
+                            Config.StatisticsConfig.Day -> Unit
+                            Config.StatisticsConfig.Weak -> Unit
+                            Config.StatisticsConfig.Year -> Unit
+                            Config.TrackCollectionsConfig.Albums -> Unit
+                            Config.TrackCollectionsConfig.CustomPlaylists -> Unit
                         }
                     },
                     bottomBar = {
                         PlayingBar(
+                            rootScreen,
                             tracksState,
                             currentTrackState,
                             isPlayingCoverLoadedState,
@@ -216,7 +236,7 @@ private suspend fun replayCurrentTrack(
     speedState: State<Float>
 ) = coroutineScope {
     launch(Dispatchers.IO) {
-        RustLibs.replayCurrentTrackBlocking()
+        RustLibs.replayCurTrackBlocking()
 
         startPlaybackControlTasks(
             currentTrackState,

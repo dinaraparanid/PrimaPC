@@ -19,15 +19,15 @@ sealed interface ScreenElement {
             object AboutApp : MainMenuScreen
         }
 
-        sealed interface TrackCollections : Screen {
-            object Albums : TrackCollections
-            object CustomPlaylists : TrackCollections
+        sealed interface TrackCollectionsScreen : Screen {
+            object Albums : TrackCollectionsScreen
+            object CustomPlaylists : TrackCollectionsScreen
         }
 
-        sealed interface Favourites : Screen {
-            object Tracks : Favourites
-            object Artists : Favourites
-            object TrackCollections : Favourites
+        sealed interface FavouritesScreen : Screen {
+            object Tracks : FavouritesScreen
+            object Artists : FavouritesScreen
+            object TrackCollections : FavouritesScreen
         }
 
         sealed interface GTMScreen : Screen {
@@ -43,10 +43,16 @@ sealed interface ScreenElement {
         }
 
         sealed interface SettingsScreen : Screen {
-            object Font : SettingsScreen
-            object Theme : SettingsScreen
+            object Fonts : SettingsScreen
+            object Themes : SettingsScreen
             object FilesLocation : SettingsScreen
             object HiddenTracks : SettingsScreen
+        }
+
+        sealed interface PlaybarScreen : Screen {
+            object CurrentPlaylist : SettingsScreen
+            object TrimTrack : SettingsScreen
+            object Equalizer : SettingsScreen
         }
     }
 }

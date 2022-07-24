@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
+import com.dinaraparanid.prima.ui.utils.navigation.RootScreen
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.calcTrackTime
 import com.dinaraparanid.prima.utils.extensions.correctUTF8
@@ -33,6 +34,7 @@ import java.io.File
 
 @Composable
 fun PlayingBar(
+    rootScreen: RootScreen,
     tracksState: SnapshotStateList<Track>,
     currentTrackState: MutableState<Track?>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
@@ -76,6 +78,7 @@ fun PlayingBar(
             CurrentTrackData(currentTrackState, coverState, isPlayingCoverLoadedState)
 
             ButtonsAndTrack(
+                rootScreen,
                 tracksState,
                 currentTrackState,
                 isPlayingCoverLoadedState,
@@ -161,6 +164,7 @@ private fun BoxScope.CurrentTrackData(
 
 @Composable
 private fun ColumnScope.Buttons(
+    rootScreen: RootScreen,
     tracksState: SnapshotStateList<Track>,
     currentTrackState: MutableState<Track?>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
@@ -173,7 +177,23 @@ private fun ColumnScope.Buttons(
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    Row(modifier = Modifier.width(500.dp).weight(1F).align(Alignment.CenterHorizontally)) {
+    Row(modifier = Modifier.width(650.dp).weight(1F).align(Alignment.CenterHorizontally)) {
+        Button(
+            colors = ButtonDefaults.buttonColors(Color.Transparent),
+            elevation = null,
+            contentPadding = PaddingValues(3.dp),
+            modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
+            onClick = rootScreen::changeConfigToCurPlaylist
+        ) {
+            Image(
+                painter = painterResource("images/playlist.png"),
+                contentDescription = Localization.trackCover.resource,
+                colorFilter = ColorFilter.tint(Params.secondaryAlternativeColor),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp).weight(1F))
+
         Button(
             colors = ButtonDefaults.buttonColors(Color.Transparent),
             elevation = null,
@@ -331,6 +351,24 @@ private fun ColumnScope.Buttons(
                 contentScale = ContentScale.Inside,
             )
         }
+
+        Spacer(modifier = Modifier.height(20.dp).weight(1F))
+
+        Button(
+            colors = ButtonDefaults.buttonColors(Color.Transparent),
+            elevation = null,
+            contentPadding = PaddingValues(1.dp),
+            modifier = Modifier.weight(3F).align(Alignment.CenterVertically),
+            onClick = {
+                // TODO: Trim track
+            }
+        ) {
+            Image(
+                painter = painterResource("images/scissors_start.png"),
+                contentDescription = Localization.trackCover.resource,
+                colorFilter = ColorFilter.tint(Params.secondaryAlternativeColor),
+            )
+        }
     }
 }
 
@@ -402,6 +440,7 @@ private fun ColumnScope.Track(
 
 @Composable
 private fun BoxScope.ButtonsAndTrack(
+    rootScreen: RootScreen,
     tracksState: SnapshotStateList<Track>,
     currentTrackState: MutableState<Track?>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
@@ -418,8 +457,9 @@ private fun BoxScope.ButtonsAndTrack(
         .padding(top = 20.dp)
         .align(Alignment.Center),
 ) {
-    Column(modifier = Modifier.width(750.dp)) {
+    Column(modifier = Modifier.width(800.dp)) {
         Buttons(
+            rootScreen,
             tracksState,
             currentTrackState,
             isPlayingCoverLoadedState,

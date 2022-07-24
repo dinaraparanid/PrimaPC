@@ -6,12 +6,10 @@ import com.arkivanov.decompose.router.RouterState
 import com.arkivanov.decompose.router.replaceCurrent
 import com.arkivanov.decompose.router.router
 import com.arkivanov.decompose.value.Value
-import com.arkivanov.essenty.parcelable.Parcelable
-import com.arkivanov.essenty.parcelable.Parcelize
 
 @Suppress("IncorrectFormatting")
 class RootScreen(componentContext: ComponentContext) : ScreenElement, ComponentContext by componentContext {
-    override val routerState: Value<RouterState<*, ScreenElement.Screen.MainMenuScreen>>
+    override val routerState: Value<RouterState<*, ScreenElement.Screen>>
         get() = router.state
 
     private lateinit var _currentConfigState: MutableState<Config>
@@ -27,48 +25,37 @@ class RootScreen(componentContext: ComponentContext) : ScreenElement, ComponentC
         )
     }
 
-    sealed interface Config : Parcelable {
-        @Parcelize
-        object Tracks : Config
-
-        @Parcelize
-        object TrackCollections: Config
-
-        @Parcelize
-        object Artists: Config
-
-        @Parcelize
-        object Favourites: Config
-
-        @Parcelize
-        object MP3Converter: Config
-
-        @Parcelize
-        object GTM: Config
-
-        @Parcelize
-        object Statistics: Config
-
-        @Parcelize
-        object Settings: Config
-
-        @Parcelize
-        object AboutApp: Config
-    }
-
-    private inline val initialConfig: Config
-        get() = Config.Tracks // TODO: Load initial screen
+    private inline val initialConfig: Config.MainMenuConfig
+        get() = Config.MainMenuConfig.Tracks // TODO: Load initial screen
 
     private fun getChild(config: Config) = when (config) {
-        Config.Tracks -> ScreenElement.Screen.MainMenuScreen.Tracks
-        Config.TrackCollections -> ScreenElement.Screen.MainMenuScreen.TrackCollections
-        Config.Artists -> ScreenElement.Screen.MainMenuScreen.Artists
-        Config.Favourites -> ScreenElement.Screen.MainMenuScreen.Favourites
-        Config.MP3Converter -> ScreenElement.Screen.MainMenuScreen.MP3Converter
-        Config.GTM -> ScreenElement.Screen.MainMenuScreen.GTM
-        Config.Statistics -> ScreenElement.Screen.MainMenuScreen.Statistics
-        Config.Settings -> ScreenElement.Screen.MainMenuScreen.Settings
-        Config.AboutApp -> ScreenElement.Screen.MainMenuScreen.AboutApp
+        Config.MainMenuConfig.Tracks -> ScreenElement.Screen.MainMenuScreen.Tracks
+        Config.MainMenuConfig.TrackCollections -> ScreenElement.Screen.MainMenuScreen.TrackCollections
+        Config.MainMenuConfig.Artists -> ScreenElement.Screen.MainMenuScreen.Artists
+        Config.MainMenuConfig.Favourites -> ScreenElement.Screen.MainMenuScreen.Favourites
+        Config.MainMenuConfig.MP3Converter -> ScreenElement.Screen.MainMenuScreen.MP3Converter
+        Config.MainMenuConfig.GTM -> ScreenElement.Screen.MainMenuScreen.GTM
+        Config.MainMenuConfig.Statistics -> ScreenElement.Screen.MainMenuScreen.Statistics
+        Config.MainMenuConfig.Settings -> ScreenElement.Screen.MainMenuScreen.Settings
+        Config.MainMenuConfig.AboutApp -> ScreenElement.Screen.MainMenuScreen.AboutApp
+        Config.FavouritesConfig.Artists -> ScreenElement.Screen.FavouritesScreen.Artists
+        Config.FavouritesConfig.TrackCollections -> ScreenElement.Screen.FavouritesScreen.TrackCollections
+        Config.FavouritesConfig.Tracks -> ScreenElement.Screen.FavouritesScreen.Tracks
+        Config.GTMConfig.AboutGame -> ScreenElement.Screen.GTMScreen.AboutGame
+        Config.GTMConfig.Game -> ScreenElement.Screen.GTMScreen.Game
+        Config.PlaybarConfig.CurrentPlaylist -> ScreenElement.Screen.PlaybarScreen.CurrentPlaylist
+        Config.PlaybarConfig.Equalizer -> ScreenElement.Screen.PlaybarScreen.Equalizer
+        Config.SettingsConfig.FilesLocation -> ScreenElement.Screen.SettingsScreen.FilesLocation
+        Config.SettingsConfig.Fonts -> ScreenElement.Screen.SettingsScreen.Fonts
+        Config.SettingsConfig.HiddenTracks -> ScreenElement.Screen.SettingsScreen.HiddenTracks
+        Config.SettingsConfig.Themes -> ScreenElement.Screen.SettingsScreen.Themes
+        Config.PlaybarConfig.TrimTrack -> ScreenElement.Screen.PlaybarScreen.TrimTrack
+        Config.StatisticsConfig.AllTime -> ScreenElement.Screen.StatisticsScreen.AllTime
+        Config.StatisticsConfig.Day -> ScreenElement.Screen.StatisticsScreen.Day
+        Config.StatisticsConfig.Weak -> ScreenElement.Screen.StatisticsScreen.Weak
+        Config.StatisticsConfig.Year -> ScreenElement.Screen.StatisticsScreen.Year
+        Config.TrackCollectionsConfig.Albums -> ScreenElement.Screen.TrackCollectionsScreen.Albums
+        Config.TrackCollectionsConfig.CustomPlaylists -> ScreenElement.Screen.TrackCollectionsScreen.CustomPlaylists
     }
 
     @Suppress("NOTHING_TO_INLINE")
@@ -77,15 +64,16 @@ class RootScreen(componentContext: ComponentContext) : ScreenElement, ComponentC
         router.replaceCurrent(_currentConfigState.value)
     }
 
-    fun changeConfigToTracks()              = changeConfig(Config.Tracks)
-    fun changeConfigToTrackCollections()    = changeConfig(Config.TrackCollections)
-    fun changeConfigToArtists()             = changeConfig(Config.Artists)
-    fun changeConfigToFavourites()          = changeConfig(Config.Favourites)
-    fun changeConfigToMP3Converter()        = changeConfig(Config.MP3Converter)
-    fun changeConfigToGTM()                 = changeConfig(Config.GTM)
-    fun changeConfigToStatistics()          = changeConfig(Config.Statistics)
-    fun changeConfigToSettings()            = changeConfig(Config.Settings)
-    fun changeConfigToAboutApp()            = changeConfig(Config.AboutApp)
+    fun changeConfigToTracks()              = changeConfig(Config.MainMenuConfig.Tracks)
+    fun changeConfigToTrackCollections()    = changeConfig(Config.MainMenuConfig.TrackCollections)
+    fun changeConfigToArtists()             = changeConfig(Config.MainMenuConfig.Artists)
+    fun changeConfigToFavourites()          = changeConfig(Config.MainMenuConfig.Favourites)
+    fun changeConfigToMP3Converter()        = changeConfig(Config.MainMenuConfig.MP3Converter)
+    fun changeConfigToGTM()                 = changeConfig(Config.MainMenuConfig.GTM)
+    fun changeConfigToStatistics()          = changeConfig(Config.MainMenuConfig.Statistics)
+    fun changeConfigToSettings()            = changeConfig(Config.MainMenuConfig.Settings)
+    fun changeConfigToAboutApp()            = changeConfig(Config.MainMenuConfig.AboutApp)
+    fun changeConfigToCurPlaylist()         = changeConfig(Config.PlaybarConfig.CurrentPlaylist)
 
     @Composable
     fun start() {

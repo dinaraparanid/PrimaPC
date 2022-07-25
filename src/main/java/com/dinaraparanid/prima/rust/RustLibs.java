@@ -97,6 +97,8 @@ public enum RustLibs {;
     @Nullable
     public static final native Track[] getCurPlaylist();
 
+    public static final native void updateAndStoreCurPlaylist(@NotNull final List<Track> curPlaylist);
+
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;
     }

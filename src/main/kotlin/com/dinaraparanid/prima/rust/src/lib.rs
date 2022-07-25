@@ -673,3 +673,54 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurPlaylist
             .into_jobject_array(&env)
     }
 }
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_updateAndStoreCurPlaylist(
+    env: JNIEnv,
+    _class: jclass,
+    cur_playlist: JObject,
+) {
+    let new_playlist = JList::from_env(&env, cur_playlist)
+        .unwrap()
+        .iter()
+        .unwrap()
+        .map(|jtrack| DefaultTrack::from_env(&env, jtrack))
+        .collect::<Vec<_>>();
+
+    let new_cur_ind = new_playlist
+        .iter()
+        .position(|track| unsafe {
+            *track
+                == *PARAMS
+                    .read()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap()
+                    .get_cur_playlist()
+                    .get_cur_track()
+                    .unwrap()
+        })
+        .unwrap();
+
+    unsafe {
+        *PARAMS
+            .write()
+            .unwrap()
+            .as_mut()
+            .unwrap()
+            .get_cur_playlist_mut() =
+            DefaultPlaylist::new(None, PlaylistType::default(), new_playlist, new_cur_ind);
+    }
+
+    StorageUtil::store_current_playlist(unsafe {
+        PARAMS
+            .read()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .get_cur_playlist()
+            .clone()
+    })
+    .unwrap_or_default()
+}

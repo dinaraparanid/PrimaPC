@@ -7,8 +7,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
-import com.dinaraparanid.prima.ui.tracks.TrackList
+import com.dinaraparanid.prima.ui.tracks.DraggableTrackList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -40,7 +41,7 @@ fun CurrentPlaylistFragment(
         }
     }
 
-    TrackList(
+    DraggableTrackList(
         currentPlaylistTracksState,
         currentPlaylistFilteredTracksState,
         currentTrackState,
@@ -50,5 +51,12 @@ fun CurrentPlaylistFragment(
         loopingState,
         isPlaybackTrackDraggingState,
         speedState,
+        onTrackDragged = { curPlaylist ->
+            coroutineScope {
+                launch(Dispatchers.IO) {
+                    RustLibs.updateAndStoreCurPlaylist(curPlaylist)
+                }
+            }
+        }
     ) { _, filteredTracksState, listState -> CurrentPlaylistBar(filteredTracksState, listState) }
 }

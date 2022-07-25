@@ -16,8 +16,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dinaraparanid.prima.entities.Track
+import com.dinaraparanid.prima.rust.RustLibs
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.localization.Localization
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
@@ -46,6 +48,10 @@ fun CurrentPlaylistBar(
                         onClick = {
                             filteredTracksState.shuffle()
                             coroutineScope.launch { listState.scrollToItem(0) }
+
+                            coroutineScope.launch(Dispatchers.IO) {
+                                RustLibs.updateAndStoreCurPlaylist(filteredTracksState)
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
                         elevation = null,
@@ -64,7 +70,7 @@ fun CurrentPlaylistBar(
                         text = "${Localization.tracks.resource}: ${filteredTracksState.size}",
                         fontSize = 20.sp,
                         color = Params.primaryColor,
-                        modifier = Modifier.align(Alignment.CenterVertically)
+                        modifier = Modifier.align(Alignment.CenterVertically).padding(start = 20.dp)
                     )
                 }
             }

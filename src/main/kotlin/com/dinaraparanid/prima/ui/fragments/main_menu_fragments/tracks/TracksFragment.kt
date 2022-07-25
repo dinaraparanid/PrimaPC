@@ -19,7 +19,7 @@ fun TracksFragment(
     tracksState: SnapshotStateList<Track>,
     filteredTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
-    speedState: State<Float>
+    speedState: State<Float>,
 ) {
     val coroutineScope = rememberCoroutineScope()
     coroutineScope.launch { scanTracks(tracksState, filteredTracksState) }

@@ -1,4 +1,4 @@
-package com.dinaraparanid.prima.ui.tracks
+package com.dinaraparanid.prima.ui.utils.tracks
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi

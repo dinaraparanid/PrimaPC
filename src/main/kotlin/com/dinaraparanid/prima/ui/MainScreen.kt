@@ -16,6 +16,8 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
+import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesAppBar
+import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesScreen
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.tracks.TracksAppBar
 import com.dinaraparanid.prima.ui.fragments.playbar_fragments.current_playlist.CurrentPlaylistAppBar
 import com.dinaraparanid.prima.ui.utils.navigation.Config
@@ -76,7 +78,12 @@ fun MainScreen() {
         val currentPlaylistTracksState = mutableStateListOf<Track>()
         val currentPlaylistFilteredTracksState = mutableStateListOf<Track>()
 
+        // Favourite Tracks
+        val favouriteTracksState = mutableStateListOf<Track>()
+        val filteredFavouriteTracksState = mutableStateListOf<Track>()
+
         val rootScreen = RootScreen(DefaultComponentContext(LifecycleRegistry())).apply { start() }
+        val favouritesScreen = FavouritesScreen(DefaultComponentContext(LifecycleRegistry())).apply { start() }
 
         Surface(color = secondary, modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -90,6 +97,11 @@ fun MainScreen() {
                                 currentPlaylistFilteredTracksState
                             )
 
+                            Config.MainMenuConfig.Favourites -> FavouritesAppBar(
+                                favouriteTracksState,
+                                filteredFavouriteTracksState
+                            )
+
                             // TODO: other app bars
                             Config.FavouritesConfig.Artists -> Unit
                             Config.FavouritesConfig.TrackCollections -> Unit
@@ -98,7 +110,6 @@ fun MainScreen() {
                             Config.GTMConfig.Game -> Unit
                             Config.MainMenuConfig.AboutApp -> Unit
                             Config.MainMenuConfig.Artists -> Unit
-                            Config.MainMenuConfig.Favourites -> Unit
                             Config.MainMenuConfig.GTM -> Unit
                             Config.MainMenuConfig.MP3Converter -> Unit
                             Config.MainMenuConfig.Settings -> Unit
@@ -141,6 +152,7 @@ fun MainScreen() {
 
                         RootView(
                             rootScreen,
+                            favouritesScreen,
                             currentTrackState,
                             isPlayingState,
                             isPlayingCoverLoadedState,

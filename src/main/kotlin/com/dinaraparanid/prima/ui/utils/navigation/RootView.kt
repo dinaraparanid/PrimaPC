@@ -9,6 +9,8 @@ import com.arkivanov.decompose.extensions.compose.jetbrains.Children
 import com.arkivanov.decompose.extensions.compose.jetbrains.animation.child.childAnimation
 import com.arkivanov.decompose.extensions.compose.jetbrains.animation.child.fade
 import com.dinaraparanid.prima.entities.Track
+import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesFragment
+import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesScreen
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.tracks.TracksFragment
 import com.dinaraparanid.prima.ui.fragments.playbar_fragments.current_playlist.CurrentPlaylistFragment
 
@@ -16,6 +18,7 @@ import com.dinaraparanid.prima.ui.fragments.playbar_fragments.current_playlist.C
 @Composable
 fun RootView(
     rootScreen: RootScreen,
+    favouritesScreen: FavouritesScreen,
     currentTrackState: MutableState<Track?>,
     isPlayingState: MutableState<Boolean>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
@@ -56,10 +59,22 @@ fun RootView(
             speedState
         )
 
+        ScreenElement.Screen.MainMenuScreen.Favourites -> FavouritesFragment(
+            favouritesScreen,
+            currentTrackState,
+            isPlayingState,
+            isPlayingCoverLoadedState,
+            playbackPositionState,
+            loopingState,
+            allTracksState,
+            filteredAllTracksState,
+            isPlaybackTrackDraggingState,
+            speedState
+        )
+
         // TODO: Other screens
         ScreenElement.Screen.MainMenuScreen.TrackCollections -> Unit
         ScreenElement.Screen.MainMenuScreen.Artists -> Unit
-        ScreenElement.Screen.MainMenuScreen.Favourites -> Unit
         ScreenElement.Screen.MainMenuScreen.AboutApp -> Unit
         ScreenElement.Screen.MainMenuScreen.MP3Converter -> Unit
         ScreenElement.Screen.MainMenuScreen.GTM -> Unit

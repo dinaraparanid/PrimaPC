@@ -94,6 +94,9 @@ public enum RustLibs {;
 
     public static final native boolean isTrackLiked(@NotNull final Track track);
 
+    @NotNull
+    public static final native Track[] getFavouriteTracks();
+
     @Nullable
     public static final native Track[] getCurPlaylist();
 

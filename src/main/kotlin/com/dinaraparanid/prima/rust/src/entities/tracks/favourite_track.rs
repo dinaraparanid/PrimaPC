@@ -61,6 +61,43 @@ impl TrackTrait for FavouriteTrack {
     }
 }
 
+impl TrackTrait for &FavouriteTrack {
+    #[inline]
+    fn get_title(&self) -> Option<&String> {
+        self.title.as_ref()
+    }
+
+    #[inline]
+    fn get_artist(&self) -> Option<&String> {
+        self.artist.as_ref()
+    }
+
+    #[inline]
+    fn get_album(&self) -> Option<&String> {
+        self.album.as_ref()
+    }
+
+    #[inline]
+    fn get_path(&self) -> &PathBuf {
+        &self.path
+    }
+
+    #[inline]
+    fn get_duration(&self) -> &Duration {
+        &self.duration
+    }
+
+    #[inline]
+    fn get_add_date(&self) -> &DateTime<Local> {
+        &self.add_date
+    }
+
+    #[inline]
+    fn get_number_in_album(&self) -> i16 {
+        self.number_in_album
+    }
+}
+
 impl DBEntity for FavouriteTrack {
     type PrimaryKey = PathBuf;
 

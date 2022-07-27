@@ -269,7 +269,7 @@ object Localization {
     )
 
     @JvmField
-    val currentTrack = resource(
+    val currentPlaylist = resource(
         en = "Current Playlist",
         ru = "Текущий плейлист",
         be = "Бягучы плэйліст",

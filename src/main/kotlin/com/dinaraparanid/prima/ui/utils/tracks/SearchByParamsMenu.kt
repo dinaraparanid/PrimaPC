@@ -1,4 +1,4 @@
-package com.dinaraparanid.prima.ui.tracks
+package com.dinaraparanid.prima.ui.utils.tracks
 
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable

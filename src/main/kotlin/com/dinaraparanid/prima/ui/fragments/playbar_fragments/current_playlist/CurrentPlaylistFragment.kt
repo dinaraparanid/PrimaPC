@@ -7,7 +7,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
-import com.dinaraparanid.prima.ui.tracks.DraggableTrackList
+import com.dinaraparanid.prima.ui.utils.tracks.DraggableTrackList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch

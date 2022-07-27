@@ -1,4 +1,4 @@
-package com.dinaraparanid.prima.ui.fragments.main_menu_fragments.tracks
+package com.dinaraparanid.prima.ui.utils.tracks
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,26 +18,29 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dinaraparanid.prima.entities.Track
-import com.dinaraparanid.prima.ui.utils.tracks.SearchByParamsMenu
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.localization.Localization
-import kotlinx.coroutines.launch
+import com.dinaraparanid.prima.utils.localization.LocalizedString
 
 @Composable
-fun TracksAppBar(allTracksState: SnapshotStateList<Track>, filteredAllTracksState: SnapshotStateList<Track>) {
+fun DefaultTracksAppBar(
+    tracksState: SnapshotStateList<Track>,
+    filteredTracksState: SnapshotStateList<Track>,
+    mainLabel: LocalizedString
+) {
     val isSearchingState = remember { mutableStateOf(false) }
 
     when {
         isSearchingState.value -> SearchAppBar(
-            allTracksState,
-            filteredAllTracksState,
+            tracksState,
+            filteredTracksState,
             isSearchingState,
             onTextChanged = { q ->
                 val query = q.lowercase()
 
-                filteredAllTracksState.run {
+                filteredTracksState.run {
                     clear()
-                    addAll(allTracksState.filter {
+                    addAll(tracksState.filter {
                         val ord = Params.tracksSearchOrder
 
                         if (Params.TracksSearchOrder.TITLE in ord && it.title?.lowercase()?.contains(query) == true)
@@ -52,7 +55,7 @@ fun TracksAppBar(allTracksState: SnapshotStateList<Track>, filteredAllTracksStat
             },
         )
 
-        else -> DefaultAppBar(isSearchingState, allTracksState, filteredAllTracksState)
+        else -> DefaultAppBar(isSearchingState, mainLabel)
     }
 }
 
@@ -132,11 +135,7 @@ private fun SearchAppBar(
 }
 
 @Composable
-private fun DefaultAppBar(
-    isSearchingState: MutableState<Boolean>,
-    tracksState: SnapshotStateList<Track>,
-    filteredTracksState: SnapshotStateList<Track>
-) = TopAppBar(
+private fun DefaultAppBar(isSearchingState: MutableState<Boolean>, mainLabel: LocalizedString) = TopAppBar(
     modifier = Modifier.fillMaxWidth().height(60.dp),
     elevation = 10.dp
 ) {
@@ -150,7 +149,7 @@ private fun DefaultAppBar(
             Spacer(modifier = Modifier.width(40.dp).fillMaxHeight())
 
             Text(
-                text = Localization.tracks.resource,
+                text = mainLabel.resource,
                 fontSize = 22.sp,
                 color = Params.secondaryAlternativeColor,
                 modifier = Modifier.align(Alignment.CenterVertically)
@@ -159,8 +158,6 @@ private fun DefaultAppBar(
             Spacer(modifier = Modifier.weight(1F))
 
             Row(modifier = Modifier.align(Alignment.CenterVertically)) {
-                val coroutineScope = rememberCoroutineScope()
-
                 IconButton(
                     modifier = Modifier.align(Alignment.CenterVertically),
                     onClick = { isSearchingState.value = true }
@@ -188,18 +185,6 @@ private fun DefaultAppBar(
                 }
 
                 SearchByParamsMenu(isPopupMenuExpandedState)
-
-                IconButton(
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                    onClick = { coroutineScope.launch { scanTracks(tracksState, filteredTracksState) } }
-                ) {
-                    Icon(
-                        modifier = Modifier.alpha(ContentAlpha.medium).width(30.dp).height(30.dp),
-                        painter = painterResource("images/scanner_icon.png"),
-                        contentDescription = Localization.search.resource,
-                        tint = Params.secondaryAlternativeColor
-                    )
-                }
             }
         }
     }

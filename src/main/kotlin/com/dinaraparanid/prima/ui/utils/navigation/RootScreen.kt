@@ -1,34 +1,20 @@
 package com.dinaraparanid.prima.ui.utils.navigation
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.MutableState
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.router.RouterState
-import com.arkivanov.decompose.router.replaceCurrent
-import com.arkivanov.decompose.router.router
 import com.arkivanov.decompose.value.Value
 
 @Suppress("IncorrectFormatting")
-class RootScreen(componentContext: ComponentContext) : ScreenElement, ComponentContext by componentContext {
+class RootScreen(componentContext: ComponentContext) : AbstractScreen<ScreenElement.Screen, Config>(componentContext) {
     override val routerState: Value<RouterState<*, ScreenElement.Screen>>
         get() = router.state
 
-    private lateinit var _currentConfigState: MutableState<Config>
+    override lateinit var _currentConfigState: MutableState<Config>
 
-    val currentConfigState: State<Config>
-        get() = _currentConfigState
+    override val initialConfig: Config.MainMenuConfig = Config.MainMenuConfig.Tracks // TODO: Load initial screen
 
-    private val router by lazy {
-        router(
-            initialConfiguration = _currentConfigState.value,
-            handleBackButton = true,
-            childFactory = { config, _ -> getChild(config) }
-        )
-    }
-
-    private inline val initialConfig: Config.MainMenuConfig
-        get() = Config.MainMenuConfig.Tracks // TODO: Load initial screen
-
-    private fun getChild(config: Config) = when (config) {
+    override fun getChild(config: Config) = when (config) {
         Config.MainMenuConfig.Tracks -> ScreenElement.Screen.MainMenuScreen.Tracks
         Config.MainMenuConfig.TrackCollections -> ScreenElement.Screen.MainMenuScreen.TrackCollections
         Config.MainMenuConfig.Artists -> ScreenElement.Screen.MainMenuScreen.Artists
@@ -38,30 +24,16 @@ class RootScreen(componentContext: ComponentContext) : ScreenElement, ComponentC
         Config.MainMenuConfig.Statistics -> ScreenElement.Screen.MainMenuScreen.Statistics
         Config.MainMenuConfig.Settings -> ScreenElement.Screen.MainMenuScreen.Settings
         Config.MainMenuConfig.AboutApp -> ScreenElement.Screen.MainMenuScreen.AboutApp
-        Config.FavouritesConfig.Artists -> ScreenElement.Screen.FavouritesScreen.Artists
-        Config.FavouritesConfig.TrackCollections -> ScreenElement.Screen.FavouritesScreen.TrackCollections
-        Config.FavouritesConfig.Tracks -> ScreenElement.Screen.FavouritesScreen.Tracks
         Config.GTMConfig.AboutGame -> ScreenElement.Screen.GTMScreen.AboutGame
         Config.GTMConfig.Game -> ScreenElement.Screen.GTMScreen.Game
         Config.PlaybarConfig.CurrentPlaylist -> ScreenElement.Screen.PlaybarScreen.CurrentPlaylist
         Config.PlaybarConfig.Equalizer -> ScreenElement.Screen.PlaybarScreen.Equalizer
+        Config.PlaybarConfig.TrimTrack -> ScreenElement.Screen.PlaybarScreen.TrimTrack
         Config.SettingsConfig.FilesLocation -> ScreenElement.Screen.SettingsScreen.FilesLocation
         Config.SettingsConfig.Fonts -> ScreenElement.Screen.SettingsScreen.Fonts
         Config.SettingsConfig.HiddenTracks -> ScreenElement.Screen.SettingsScreen.HiddenTracks
         Config.SettingsConfig.Themes -> ScreenElement.Screen.SettingsScreen.Themes
-        Config.PlaybarConfig.TrimTrack -> ScreenElement.Screen.PlaybarScreen.TrimTrack
-        Config.StatisticsConfig.AllTime -> ScreenElement.Screen.StatisticsScreen.AllTime
-        Config.StatisticsConfig.Day -> ScreenElement.Screen.StatisticsScreen.Day
-        Config.StatisticsConfig.Weak -> ScreenElement.Screen.StatisticsScreen.Weak
-        Config.StatisticsConfig.Year -> ScreenElement.Screen.StatisticsScreen.Year
-        Config.TrackCollectionsConfig.Albums -> ScreenElement.Screen.TrackCollectionsScreen.Albums
-        Config.TrackCollectionsConfig.CustomPlaylists -> ScreenElement.Screen.TrackCollectionsScreen.CustomPlaylists
-    }
-
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun changeConfig(config: Config) {
-        _currentConfigState.value = config
-        router.replaceCurrent(_currentConfigState.value)
+        else -> throw IllegalArgumentException("$config not a root screen config")
     }
 
     fun changeConfigToTracks()              = changeConfig(Config.MainMenuConfig.Tracks)
@@ -74,10 +46,5 @@ class RootScreen(componentContext: ComponentContext) : ScreenElement, ComponentC
     fun changeConfigToSettings()            = changeConfig(Config.MainMenuConfig.Settings)
     fun changeConfigToAboutApp()            = changeConfig(Config.MainMenuConfig.AboutApp)
     fun changeConfigToCurPlaylist()         = changeConfig(Config.PlaybarConfig.CurrentPlaylist)
-
-    @Composable
-    fun start() {
-        _currentConfigState = remember { mutableStateOf(initialConfig) }
-    }
 }
 

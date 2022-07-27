@@ -1,4 +1,4 @@
-package com.dinaraparanid.prima.ui.tracks
+package com.dinaraparanid.prima.ui.utils.tracks
 
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*

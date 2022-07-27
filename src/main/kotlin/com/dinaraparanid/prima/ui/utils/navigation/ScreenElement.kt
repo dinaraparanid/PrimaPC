@@ -3,7 +3,7 @@ package com.dinaraparanid.prima.ui.utils.navigation
 import com.arkivanov.decompose.router.RouterState
 import com.arkivanov.decompose.value.Value
 
-sealed interface ScreenElement {
+interface ScreenElement {
     val routerState: Value<RouterState<*, Screen>>
 
     sealed interface Screen {

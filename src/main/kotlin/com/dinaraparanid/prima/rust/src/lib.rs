@@ -34,18 +34,21 @@ use crate::{
             default_playlist::DefaultPlaylist, playlist_trait::PlaylistTrait,
             playlist_type::PlaylistType,
         },
-        tracks::{default_track::DefaultTrack, track_trait::TrackTrait},
+        tracks::{
+            default_track::DefaultTrack, favourite_track::FavouriteTrack, track_trait::TrackTrait,
+        },
     },
     jvm::JVM,
     utils::{
-        extensions::track_ext::TrackExt,
+        extensions::{
+            playlist_ext::PlaylistExt, track_ext::TrackExt, vec_ext::ExactSizeIteratorExt,
+        },
         params::PARAMS,
         storage_util::StorageUtil,
         track_order::{Comparator, Ord, TrackOrder},
     },
 };
 
-use crate::utils::extensions::playlist_ext::PlaylistExt;
 use jni::{
     objects::{JList, JObject, JString},
     sys::*,
@@ -116,26 +119,11 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracksBl
     env: JNIEnv,
     _class: jclass,
 ) -> jobjectArray {
-    let rust_tracks = block_on(AudioScanner::get_all_tracks());
-    let rust_tracks = &*rust_tracks.lock().unwrap();
-
-    let java_tracks = env
-        .new_object_array(
-            rust_tracks.len() as jsize,
-            "com/dinaraparanid/prima/entities/Track",
-            JObject::null(),
-        )
-        .unwrap();
-
-    rust_tracks
-        .into_iter()
-        .enumerate()
-        .for_each(|(ind, track)| {
-            env.set_object_array_element(java_tracks, ind as jsize, track.to_java_track(&env))
-                .unwrap();
-        });
-
-    java_tracks
+    block_on(AudioScanner::get_all_tracks())
+        .lock()
+        .unwrap()
+        .iter()
+        .into_jobject_array(&env)
 }
 
 #[no_mangle]
@@ -723,4 +711,15 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_updateAndStore
             .clone()
     })
     .unwrap_or_default()
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getFavouriteTracks(
+    env: JNIEnv,
+    _class: jclass,
+) -> jobjectArray {
+    let connection = establish_connection().unwrap();
+    let tracks: Vec<FavouriteTrack> = FavouriteTrackDao::get_all(&connection);
+    tracks.into_iter().into_jobject_array(&env)
 }

@@ -8,11 +8,12 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
 import com.dinaraparanid.prima.ui.utils.tracks.DefaultTracksFragment
+import com.dinaraparanid.prima.utils.extensions.correctUTF8String
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
-fun FavouritesTracksFragment(
+fun FavouriteTracksFragment(
     currentTrackState: MutableState<Track?>,
     isPlayingState: MutableState<Boolean>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
@@ -22,6 +23,7 @@ fun FavouritesTracksFragment(
     filteredTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>,
+    isLikedState: MutableState<Boolean>
 ) {
     rememberCoroutineScope().launch(Dispatchers.IO) {
         val favouriteTracks = RustLibs.getFavouriteTracks()
@@ -46,6 +48,7 @@ fun FavouritesTracksFragment(
         tracksState,
         filteredTracksState,
         isPlaybackTrackDraggingState,
-        speedState
+        speedState,
+        isLikedState
     )
 }

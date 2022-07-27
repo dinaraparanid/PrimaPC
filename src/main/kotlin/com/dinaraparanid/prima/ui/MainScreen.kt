@@ -14,10 +14,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import com.dinaraparanid.prima.entities.Artist
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesAppBar
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesScreen
+import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.artists.ArtistsAppBar
+import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouriteFragments
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.tracks.TracksAppBar
 import com.dinaraparanid.prima.ui.fragments.playbar_fragments.current_playlist.CurrentPlaylistAppBar
 import com.dinaraparanid.prima.ui.utils.navigation.Config
@@ -74,16 +77,30 @@ fun MainScreen() {
         val allTracksState = remember { mutableStateListOf<Track>() }
         val filteredAllTracksState = remember { mutableStateListOf<Track>() }
 
+        // All artists
+        val allArtistsState = remember { mutableStateListOf<Artist>() }
+        val filteredAllArtistsState = remember { mutableStateListOf<Artist>() }
+
         // Current Playlist
         val currentPlaylistTracksState = mutableStateListOf<Track>()
         val currentPlaylistFilteredTracksState = mutableStateListOf<Track>()
+
+        val favouriteFragmentState = mutableStateOf(FavouriteFragments.TRACKS)
 
         // Favourite Tracks
         val favouriteTracksState = mutableStateListOf<Track>()
         val filteredFavouriteTracksState = mutableStateListOf<Track>()
 
+        // Favourite Artists
+        val favouriteArtistsState = remember { mutableStateListOf<Artist>() }
+        val filteredFavouriteArtistsState = remember { mutableStateListOf<Artist>() }
+
         val rootScreen = RootScreen(DefaultComponentContext(LifecycleRegistry())).apply { start() }
-        val favouritesScreen = FavouritesScreen(DefaultComponentContext(LifecycleRegistry())).apply { start() }
+
+        val favouritesScreen = FavouritesScreen(
+            DefaultComponentContext(LifecycleRegistry()),
+            favouriteFragmentState
+        ).apply { start() }
 
         Surface(color = secondary, modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -92,24 +109,25 @@ fun MainScreen() {
                         when (rootScreen.currentConfigState.value) {
                             Config.MainMenuConfig.Tracks -> TracksAppBar(allTracksState, filteredAllTracksState)
 
+                            Config.MainMenuConfig.Artists -> ArtistsAppBar(allArtistsState, filteredAllArtistsState)
+
                             Config.PlaybarConfig.CurrentPlaylist -> CurrentPlaylistAppBar(
                                 currentPlaylistTracksState,
                                 currentPlaylistFilteredTracksState
                             )
 
                             Config.MainMenuConfig.Favourites -> FavouritesAppBar(
+                                favouriteFragmentState,
                                 favouriteTracksState,
-                                filteredFavouriteTracksState
+                                filteredFavouriteTracksState,
+                                favouriteArtistsState,
+                                filteredFavouriteArtistsState
                             )
 
                             // TODO: other app bars
-                            Config.FavouritesConfig.Artists -> Unit
-                            Config.FavouritesConfig.TrackCollections -> Unit
-                            Config.FavouritesConfig.Tracks -> Unit
                             Config.GTMConfig.AboutGame -> Unit
                             Config.GTMConfig.Game -> Unit
                             Config.MainMenuConfig.AboutApp -> Unit
-                            Config.MainMenuConfig.Artists -> Unit
                             Config.MainMenuConfig.GTM -> Unit
                             Config.MainMenuConfig.MP3Converter -> Unit
                             Config.MainMenuConfig.Settings -> Unit
@@ -121,12 +139,7 @@ fun MainScreen() {
                             Config.SettingsConfig.Fonts -> Unit
                             Config.SettingsConfig.HiddenTracks -> Unit
                             Config.SettingsConfig.Themes -> Unit
-                            Config.StatisticsConfig.AllTime -> Unit
-                            Config.StatisticsConfig.Day -> Unit
-                            Config.StatisticsConfig.Weak -> Unit
-                            Config.StatisticsConfig.Year -> Unit
-                            Config.TrackCollectionsConfig.Albums -> Unit
-                            Config.TrackCollectionsConfig.CustomPlaylists -> Unit
+                            else -> Unit // View Pager's fragments
                         }
                     },
                     bottomBar = {
@@ -162,8 +175,11 @@ fun MainScreen() {
                             filteredAllTracksState,
                             currentPlaylistTracksState,
                             currentPlaylistFilteredTracksState,
+                            allArtistsState,
+                            filteredAllArtistsState,
                             isPlaybackTrackDraggingState,
-                            speedState
+                            speedState,
+                            isLikedState
                         )
                     }
                 }

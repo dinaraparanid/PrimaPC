@@ -21,7 +21,7 @@ import com.dinaraparanid.prima.rust.RustLibs
 import com.dinaraparanid.prima.ui.utils.navigation.RootScreen
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.calcTrackTime
-import com.dinaraparanid.prima.utils.extensions.correctUTF8
+import com.dinaraparanid.prima.utils.extensions.correctUTF8String
 import com.dinaraparanid.prima.utils.extensions.take
 import com.dinaraparanid.prima.utils.extensions.timeString
 import com.dinaraparanid.prima.utils.localization.Localization
@@ -54,7 +54,7 @@ fun PlayingBar(
 
     val coverTask = currentTrackState.value?.let { track ->
         coroutineScope.async(Dispatchers.IO) {
-            AudioFileIO.read(File(track.path.correctUTF8)).tagOrCreateAndSetDefault?.firstArtwork?.binaryData
+            AudioFileIO.read(File(track.path.correctUTF8String)).tagOrCreateAndSetDefault?.firstArtwork?.binaryData
         }
     }
 

@@ -25,10 +25,17 @@ use crate::{
     audio_player::audio_player::AUDIO_PLAYER,
     audio_scanner::AudioScanner,
     databases::{
+        db_entity::DBEntity,
         entity_dao::EntityDao,
-        favourites::{daos::favourite_track_dao::FavouriteTrackDao, db::establish_connection},
+        favourites::{
+            daos::{
+                favourite_artist_dao::FavouriteArtistDao, favourite_track_dao::FavouriteTrackDao,
+            },
+            db::establish_connection,
+        },
     },
     entities::{
+        artists::favourite_artist::FavouriteArtist,
         favourable::Favourable,
         playlists::{
             default_playlist::DefaultPlaylist, playlist_trait::PlaylistTrait,
@@ -41,7 +48,8 @@ use crate::{
     jvm::JVM,
     utils::{
         extensions::{
-            playlist_ext::PlaylistExt, track_ext::TrackExt, vec_ext::ExactSizeIteratorExt,
+            playlist_ext::PlaylistExt, string_ext::StringExt, track_ext::TrackExt,
+            vec_ext::ExactSizeIteratorExt,
         },
         params::PARAMS,
         storage_util::StorageUtil,
@@ -106,7 +114,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_hello(
     _class: jclass,
     name: JString,
 ) -> jstring {
-    let name: String = env.get_string(name).unwrap().into();
+    let name = String::from_jstring(&env, name);
 
     env.new_string(format!("Hello, {}!", name))
         .unwrap()
@@ -574,7 +582,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setMusicSearch
     _class: jclass,
     path: JString,
 ) {
-    let path: String = env.get_string(path).unwrap().into();
+    let path = String::from_jstring(&env, path);
     unsafe { PARAMS.write().unwrap().as_mut().unwrap().music_search_path = PathBuf::from(path) }
 }
 
@@ -625,7 +633,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onLikeTrackCli
     let track = DefaultTrack::from_env(&env, track).into_favourable();
     let connection = establish_connection().unwrap();
 
-    if FavouriteTrackDao::get_by_key(track.get_path().clone(), &connection).is_some() {
+    if FavouriteTrackDao::get_by_key(track.get_key().clone(), &connection).is_some() {
         FavouriteTrackDao::remove(vec![track], &connection)
     } else {
         FavouriteTrackDao::insert(vec![track], &connection)
@@ -722,4 +730,91 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getFavouriteTr
     let connection = establish_connection().unwrap();
     let tracks: Vec<FavouriteTrack> = FavouriteTrackDao::get_all(&connection);
     tracks.into_iter().into_jobject_array(&env)
+}
+
+/// Converts artist name to the next pattern:
+/// Name Family ... -> NF (upper case)
+/// If artist don't have second word in his name, it will return only first letter
+///
+/// # Safety
+/// Extern JNI function
+///
+/// # Arguments
+/// name - full name of artist
+///
+/// # Return
+/// Converted artist's name
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_artistImageBind(
+    env: JNIEnv,
+    _class: jclass,
+    name: JString,
+) -> jstring {
+    env.new_string(String::from_iter(
+        String::from_jstring(&env, name)
+            .trim()
+            .split_whitespace()
+            .into_iter()
+            .filter(|&x| x != "&" && x != "feat." && x != "/" && x != "ft.")
+            .take(2)
+            .map(|s| s.chars().next().unwrap().to_uppercase().next().unwrap()),
+    ))
+    .unwrap()
+    .into_inner()
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onLikeArtistClicked(
+    env: JNIEnv,
+    _class: jclass,
+    artist: JString,
+) {
+    let artist = FavouriteArtist::new(String::from_jstring(&env, artist));
+    let connection = establish_connection().unwrap();
+
+    if FavouriteArtistDao::get_by_key(artist.get_key().clone(), &connection).is_some() {
+        FavouriteArtistDao::remove(vec![artist], &connection)
+    } else {
+        FavouriteArtistDao::insert(vec![artist], &connection)
+    }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isArtistLiked(
+    env: JNIEnv,
+    _class: jclass,
+    artist: JString,
+) -> jboolean {
+    let artist = FavouriteArtist::new(String::from_jstring(&env, artist));
+    let connection = establish_connection().unwrap();
+    jboolean::from(FavouriteArtistDao::get_by_key(artist.get_key().clone(), &connection).is_some())
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getFavouriteArtists(
+    env: JNIEnv,
+    _class: jclass,
+) -> jobjectArray {
+    let connection = establish_connection().unwrap();
+    let artists = FavouriteArtistDao::get_all(&connection);
+
+    let arr = env
+        .new_object_array(artists.len() as jsize, "java/lang/String", JObject::null())
+        .unwrap();
+
+    artists.into_iter().enumerate().for_each(|(ind, artist)| {
+        env.set_object_array_element(
+            arr,
+            ind as jsize,
+            env.new_string(artist.into_string()).unwrap(),
+        )
+        .unwrap();
+    });
+
+    arr
 }

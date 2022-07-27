@@ -24,6 +24,7 @@ inline fun TrackList(
     loopingState: MutableState<Int>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>,
+    isLikedState: MutableState<Boolean>,
     trackBarCaller: @Composable (SnapshotStateList<Track>, SnapshotStateList<Track>, LazyListState) -> Unit
 ) {
     val listState = rememberLazyListState()
@@ -48,7 +49,8 @@ inline fun TrackList(
                     loopingState,
                     tracksState,
                     isPlaybackTrackDraggingState,
-                    speedState
+                    speedState,
+                    isLikedState
                 )
             }
         }

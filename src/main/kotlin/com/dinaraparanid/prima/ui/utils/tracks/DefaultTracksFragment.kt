@@ -18,6 +18,7 @@ fun DefaultTracksFragment(
     filteredTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>,
+    isLikedState: MutableState<Boolean>
 ) = TrackList(
     tracksState,
     filteredTracksState,
@@ -28,6 +29,7 @@ fun DefaultTracksFragment(
     loopingState,
     isPlaybackTrackDraggingState,
     speedState,
+    isLikedState
 ) { allTracksState, filteredTracksState, listState ->
     TracksBar(allTracksState, filteredTracksState, listState)
 }

@@ -1,6 +1,6 @@
 extern crate jni;
 
-use jni::sys::jbyte;
+use jni::{objects::JString, sys::jbyte, JNIEnv};
 
 pub(crate) trait StringExt {
     #[inline]
@@ -12,6 +12,19 @@ pub(crate) trait StringExt {
                 .as_slice(),
         )
         .to_string()
+    }
+
+    /// Creates string from jstring
+    ///
+    /// # Arguments
+    /// jstring - String from java
+    ///
+    /// # Return
+    /// Rust's string from give Java's string
+
+    #[inline]
+    fn from_jstring(env: &JNIEnv, jstring: JString) -> String {
+        env.get_string(jstring).unwrap().into()
     }
 }
 

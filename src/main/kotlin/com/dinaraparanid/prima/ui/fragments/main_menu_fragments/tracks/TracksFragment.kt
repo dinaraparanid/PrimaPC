@@ -20,6 +20,7 @@ fun TracksFragment(
     filteredTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>,
+    isLikedState: MutableState<Boolean>
 ) {
     rememberCoroutineScope().launch { scanTracks(tracksState, filteredTracksState) }
 
@@ -32,6 +33,7 @@ fun TracksFragment(
         tracksState,
         filteredTracksState,
         isPlaybackTrackDraggingState,
-        speedState
+        speedState,
+        isLikedState
     )
 }

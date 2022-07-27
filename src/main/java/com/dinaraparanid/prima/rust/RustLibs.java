@@ -102,6 +102,25 @@ public enum RustLibs {;
 
     public static final native void updateAndStoreCurPlaylist(@NotNull final List<Track> curPlaylist);
 
+    /**
+     * Converts artist name to the next pattern:
+     * name family ... -> NF (upper case).
+     * If artist don't have second word in his name, it will return only first letter
+     *
+     * @param name artist's name as byte array
+     * @return name patter
+     */
+
+    @NotNull
+    public static final native String artistImageBind(@NotNull final String name);
+
+    public static final native void onLikeArtistClicked(@NotNull final String artist);
+
+    public static final native boolean isArtistLiked(@NotNull final String artist);
+
+    @NotNull
+    public static final native String[] getFavouriteArtists();
+
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;
     }

@@ -32,6 +32,7 @@ inline fun DraggableTrackList(
     loopingState: MutableState<Int>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>,
+    isLikedState: MutableState<Boolean>,
     crossinline onTrackDragged: suspend (List<Track>) -> Unit,
     trackBar: @Composable (SnapshotStateList<Track>, SnapshotStateList<Track>, LazyListState) -> Unit,
 ) {
@@ -126,7 +127,8 @@ inline fun DraggableTrackList(
                         loopingState,
                         tracksState,
                         isPlaybackTrackDraggingState,
-                        speedState
+                        speedState,
+                        isLikedState
                     )
                 }
             }

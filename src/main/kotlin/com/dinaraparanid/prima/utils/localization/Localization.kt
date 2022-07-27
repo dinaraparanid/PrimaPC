@@ -4,6 +4,7 @@ import com.dinaraparanid.prima.utils.Params
 
 object Localization {
 
+    @JvmStatic
     @Suppress("NOTHING_TO_INLINE")
     private inline fun resource(en: String, ru: String, be: String, zh: String) = when (Params.language) {
         Params.Language.EN -> English(en)
@@ -274,5 +275,13 @@ object Localization {
         ru = "Текущий плейлист",
         be = "Бягучы плэйліст",
         zh = "当前播放列表"
+    )
+
+    @JvmField
+    val hideArtist = resource(
+        en = "Hide artist",
+        ru = "Скрыть артиста",
+        be = "Схаваць артыста",
+        zh = "隐藏艺术家"
     )
 }

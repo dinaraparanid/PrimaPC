@@ -1,21 +1,30 @@
 package com.dinaraparanid.prima.entities
 
-import com.dinaraparanid.prima.utils.extensions.correctUTF8
+import com.dinaraparanid.prima.utils.extensions.correctUTF8String
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 
-data class Track(
-    @JvmField val title: String?,
-    @JvmField val artist: String?,
-    @JvmField val album: String?,
+class Track(
+    title: String?,
+    artist: String?,
+    album: String?,
     @JvmField val path: ByteArray,
     @JvmField val duration: Long,
     @JvmField val numberInAlbum: Short
 ) {
     @JvmField
+    val title = title?.correctUTF8String
+
+    @JvmField
+    val artist = artist?.correctUTF8String
+
+    @JvmField
+    val album = album?.correctUTF8String
+
+    @JvmField
     val addDate = Files
-        .readAttributes(File(path.correctUTF8).toPath(), BasicFileAttributes::class.java)
+        .readAttributes(File(path.correctUTF8String).toPath(), BasicFileAttributes::class.java)
         .creationTime()
 
     override fun equals(other: Any?): Boolean {

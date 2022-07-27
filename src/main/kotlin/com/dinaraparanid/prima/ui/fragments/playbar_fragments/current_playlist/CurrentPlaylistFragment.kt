@@ -23,7 +23,8 @@ fun CurrentPlaylistFragment(
     playbackPositionState: MutableState<Float>,
     loopingState: MutableState<Int>,
     isPlaybackTrackDraggingState: State<Boolean>,
-    speedState: State<Float>
+    speedState: State<Float>,
+    isLikedState: MutableState<Boolean>
 ) {
     rememberCoroutineScope().launch {
         withContext(Dispatchers.IO) {
@@ -51,6 +52,7 @@ fun CurrentPlaylistFragment(
         loopingState,
         isPlaybackTrackDraggingState,
         speedState,
+        isLikedState,
         onTrackDragged = { curPlaylist ->
             coroutineScope {
                 launch(Dispatchers.IO) {

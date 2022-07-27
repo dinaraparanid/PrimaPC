@@ -22,7 +22,7 @@ import com.dinaraparanid.prima.rust.RustLibs
 import com.dinaraparanid.prima.ui.cancelPlaybackControlTasks
 import com.dinaraparanid.prima.ui.startPlaybackControlTasks
 import com.dinaraparanid.prima.utils.Params
-import com.dinaraparanid.prima.utils.extensions.correctUTF8
+import com.dinaraparanid.prima.utils.extensions.correctUTF8String
 import com.dinaraparanid.prima.utils.localization.Localization
 import com.dinaraparanid.prima.utils.localization.LocalizedString
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +44,8 @@ fun LazyItemScope.TrackItem(
     loopingState: MutableState<Int>,
     allTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
-    speedState: State<Float>
+    speedState: State<Float>,
+    isLikedState: MutableState<Boolean>
 ) {
     val track = tracksOnScreen[index]
     val coroutineScope = rememberCoroutineScope()
@@ -53,7 +54,7 @@ fun LazyItemScope.TrackItem(
 
     val coverTask = coroutineScope.async(Dispatchers.IO) {
         try {
-            AudioFileIO.read(File(track.path.correctUTF8)).tagOrCreateAndSetDefault?.firstArtwork?.binaryData
+            AudioFileIO.read(File(track.path.correctUTF8String)).tagOrCreateAndSetDefault?.firstArtwork?.binaryData
         } catch (e: Exception) {
             null
         }
@@ -178,7 +179,12 @@ fun LazyItemScope.TrackItem(
                         contentScale = ContentScale.Inside
                     )
 
-                    TrackSettingsMenu(isPopupMenuExpandedState)
+                    TrackSettingsMenu(
+                        track,
+                        currentTrackState,
+                        isLikedState,
+                        isPopupMenuExpandedState
+                    )
                 }
             }
         }
@@ -186,10 +192,17 @@ fun LazyItemScope.TrackItem(
 }
 
 @Composable
-private fun TrackSettingsMenu(isPopupMenuExpandedState: MutableState<Boolean>) = DropdownMenu(
+private fun TrackSettingsMenu(
+    track: Track,
+    curTrackState: State<Track?>,
+    isLikedState: MutableState<Boolean>,
+    isPopupMenuExpandedState: MutableState<Boolean>
+) = DropdownMenu(
     expanded = isPopupMenuExpandedState.value,
     onDismissRequest = { isPopupMenuExpandedState.value = false }
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     TrackSettingsMenuItem(title = Localization.changeTrackInfo) {
         // TODO: Change track's info
     }
@@ -199,7 +212,8 @@ private fun TrackSettingsMenu(isPopupMenuExpandedState: MutableState<Boolean>) =
     }
 
     TrackSettingsMenuItem(title = Localization.addToFavourites) {
-        // TODO: Add track to favourites
+        coroutineScope.launch(Dispatchers.IO) { RustLibs.onLikeTrackClicked(track) }
+        if (track == curTrackState.value) isLikedState.value = !isLikedState.value
     }
 
     TrackSettingsMenuItem(title = Localization.removeTrack) {

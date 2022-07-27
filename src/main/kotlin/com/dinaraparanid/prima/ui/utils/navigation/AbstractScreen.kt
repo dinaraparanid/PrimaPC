@@ -33,7 +33,7 @@ abstract class AbstractScreen<S : ScreenElement.Screen, C : Config>(componentCon
 
     protected abstract fun getChild(config: C): S
 
-    protected fun changeConfig(config: C) {
+    protected open fun changeConfig(config: C) {
         _currentConfigState.value = config
         router.replaceCurrent(_currentConfigState.value)
     }

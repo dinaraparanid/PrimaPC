@@ -107,6 +107,15 @@ impl DBEntity for FavouriteTrack {
     }
 }
 
+impl DBEntity for &FavouriteTrack {
+    type PrimaryKey = PathBuf;
+
+    #[inline]
+    fn get_key(&self) -> &PathBuf {
+        &self.path
+    }
+}
+
 impl PartialEq for FavouriteTrack {
     #[inline]
     fn eq(&self, other: &Self) -> bool {

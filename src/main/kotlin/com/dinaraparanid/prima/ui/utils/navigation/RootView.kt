@@ -8,9 +8,11 @@ import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.jetbrains.Children
 import com.arkivanov.decompose.extensions.compose.jetbrains.animation.child.childAnimation
 import com.arkivanov.decompose.extensions.compose.jetbrains.animation.child.fade
+import com.dinaraparanid.prima.entities.Artist
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesFragment
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesScreen
+import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.artists.ArtistsFragment
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.tracks.TracksFragment
 import com.dinaraparanid.prima.ui.fragments.playbar_fragments.current_playlist.CurrentPlaylistFragment
 
@@ -28,8 +30,11 @@ fun RootView(
     filteredAllTracksState: SnapshotStateList<Track>,
     currentPlaylistTracksState: SnapshotStateList<Track>,
     currentPlaylistFilteredTracksState: SnapshotStateList<Track>,
+    allArtistsState: SnapshotStateList<Artist>,
+    filteredAllArtistsState: SnapshotStateList<Artist>,
     isPlaybackTrackDraggingState: State<Boolean>,
-    speedState: State<Float>
+    speedState: State<Float>,
+    isLikedState: MutableState<Boolean>
 ) = Children(
     routerState = rootScreen.routerState,
     animation = childAnimation(fade())
@@ -44,7 +49,8 @@ fun RootView(
             allTracksState,
             filteredAllTracksState,
             isPlaybackTrackDraggingState,
-            speedState
+            speedState,
+            isLikedState
         )
 
         ScreenElement.Screen.PlaybarScreen.CurrentPlaylist -> CurrentPlaylistFragment(
@@ -56,7 +62,8 @@ fun RootView(
             playbackPositionState,
             loopingState,
             isPlaybackTrackDraggingState,
-            speedState
+            speedState,
+            isLikedState
         )
 
         ScreenElement.Screen.MainMenuScreen.Favourites -> FavouritesFragment(
@@ -68,13 +75,19 @@ fun RootView(
             loopingState,
             allTracksState,
             filteredAllTracksState,
+            allArtistsState,
+            filteredAllArtistsState,
             isPlaybackTrackDraggingState,
-            speedState
+            speedState,
+            isLikedState
+        )
+
+        ScreenElement.Screen.MainMenuScreen.Artists -> ArtistsFragment(
+            allArtistsState, filteredAllArtistsState
         )
 
         // TODO: Other screens
         ScreenElement.Screen.MainMenuScreen.TrackCollections -> Unit
-        ScreenElement.Screen.MainMenuScreen.Artists -> Unit
         ScreenElement.Screen.MainMenuScreen.AboutApp -> Unit
         ScreenElement.Screen.MainMenuScreen.MP3Converter -> Unit
         ScreenElement.Screen.MainMenuScreen.GTM -> Unit

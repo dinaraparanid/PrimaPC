@@ -9,8 +9,10 @@ import com.dinaraparanid.prima.ui.utils.navigation.Config
 import com.dinaraparanid.prima.ui.utils.navigation.ScreenElement
 
 @Suppress("IncorrectFormatting")
-class FavouritesScreen(componentContext: ComponentContext) :
-    AbstractScreen<ScreenElement.Screen.FavouritesScreen, Config.FavouritesConfig>(componentContext) {
+class FavouritesScreen(
+    componentContext: ComponentContext,
+    val favouriteFragmentState: MutableState<FavouriteFragments>
+) : AbstractScreen<ScreenElement.Screen.FavouritesScreen, Config.FavouritesConfig>(componentContext) {
     override val routerState: Value<RouterState<*, ScreenElement.Screen.FavouritesScreen>>
         get() = router.state
 
@@ -22,6 +24,16 @@ class FavouritesScreen(componentContext: ComponentContext) :
         Config.FavouritesConfig.Artists -> ScreenElement.Screen.FavouritesScreen.Artists
         Config.FavouritesConfig.TrackCollections -> ScreenElement.Screen.FavouritesScreen.TrackCollections
         Config.FavouritesConfig.Tracks -> ScreenElement.Screen.FavouritesScreen.Tracks
+    }
+
+    override fun changeConfig(config: Config.FavouritesConfig) {
+        super.changeConfig(config)
+
+        favouriteFragmentState.value = when (config) {
+            Config.FavouritesConfig.Artists -> FavouriteFragments.ARTISTS
+            Config.FavouritesConfig.TrackCollections -> FavouriteFragments.TRACK_COLLECTIONS
+            Config.FavouritesConfig.Tracks -> FavouriteFragments.TRACKS
+        }
     }
 
     fun changeConfigToTracks()              = changeConfig(Config.FavouritesConfig.Tracks)

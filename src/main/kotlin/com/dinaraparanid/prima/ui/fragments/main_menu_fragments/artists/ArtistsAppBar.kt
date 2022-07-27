@@ -1,4 +1,4 @@
-package com.dinaraparanid.prima.ui.fragments.main_menu_fragments.tracks
+package com.dinaraparanid.prima.ui.fragments.main_menu_fragments.artists
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,51 +11,39 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dinaraparanid.prima.entities.Track
+import com.dinaraparanid.prima.entities.Artist
 import com.dinaraparanid.prima.ui.utils.SearchAppBar
-import com.dinaraparanid.prima.ui.utils.tracks.SearchByParamsMenu
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.localization.Localization
 import kotlinx.coroutines.launch
 
 @Composable
-fun TracksAppBar(allTracksState: SnapshotStateList<Track>, filteredAllTracksState: SnapshotStateList<Track>) {
+fun ArtistsAppBar(allArtistsState: SnapshotStateList<Artist>, filteredAllArtistsState: SnapshotStateList<Artist>) {
     val isSearchingState = remember { mutableStateOf(false) }
 
     when {
         isSearchingState.value -> SearchAppBar(
-            allTracksState,
-            filteredAllTracksState,
+            allArtistsState,
+            filteredAllArtistsState,
             isSearchingState,
-            onTextChanged = { q ->
-                val query = q.lowercase()
+        ) { q ->
+            val query = q.lowercase()
 
-                filteredAllTracksState.run {
-                    clear()
-                    addAll(allTracksState.filter {
-                        val ord = Params.tracksSearchOrder
+            filteredAllArtistsState.run {
+                clear()
+                addAll(allArtistsState.filter { query in it.name.lowercase() })
+            }
+        }
 
-                        if (Params.TracksSearchOrder.TITLE in ord && it.title?.lowercase()?.contains(query) == true)
-                            return@filter true
-
-                        if (Params.TracksSearchOrder.ARTIST in ord && it.artist?.lowercase()?.contains(query) == true)
-                            return@filter true
-
-                        Params.TracksSearchOrder.ALBUM in ord && it.album?.lowercase()?.contains(query) == true
-                    })
-                }
-            },
-        )
-
-        else -> DefaultAppBar(isSearchingState, allTracksState, filteredAllTracksState)
+        else -> DefaultAppBar(isSearchingState, allArtistsState, filteredAllArtistsState)
     }
 }
 
 @Composable
 private fun DefaultAppBar(
     isSearchingState: MutableState<Boolean>,
-    tracksState: SnapshotStateList<Track>,
-    filteredTracksState: SnapshotStateList<Track>
+    artistsState: SnapshotStateList<Artist>,
+    filteredArtistsState: SnapshotStateList<Artist>
 ) = TopAppBar(
     modifier = Modifier.fillMaxWidth().height(60.dp),
     elevation = 10.dp
@@ -70,7 +58,7 @@ private fun DefaultAppBar(
             Spacer(modifier = Modifier.width(40.dp).fillMaxHeight())
 
             Text(
-                text = Localization.tracks.resource,
+                text = Localization.artists.resource,
                 fontSize = 22.sp,
                 color = Params.secondaryAlternativeColor,
                 modifier = Modifier.align(Alignment.CenterVertically)
@@ -93,25 +81,9 @@ private fun DefaultAppBar(
                     )
                 }
 
-                val isPopupMenuExpandedState = remember { mutableStateOf(false) }
-
                 IconButton(
                     modifier = Modifier.align(Alignment.CenterVertically),
-                    onClick = { isPopupMenuExpandedState.value = true }
-                ) {
-                    Icon(
-                        modifier = Modifier.alpha(ContentAlpha.medium).width(30.dp).height(30.dp),
-                        painter = painterResource("images/param.png"),
-                        contentDescription = Localization.search.resource,
-                        tint = Params.secondaryAlternativeColor
-                    )
-                }
-
-                SearchByParamsMenu(isPopupMenuExpandedState)
-
-                IconButton(
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                    onClick = { coroutineScope.launch { scanTracks(tracksState, filteredTracksState) } }
+                    onClick = { coroutineScope.launch { scanArtists(artistsState, filteredArtistsState) } }
                 ) {
                     Icon(
                         modifier = Modifier.alpha(ContentAlpha.medium).width(30.dp).height(30.dp),

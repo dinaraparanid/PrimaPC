@@ -1,4 +1,4 @@
-package com.dinaraparanid.prima.ui.utils.tracks
+package com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.artists
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,51 +14,38 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dinaraparanid.prima.entities.Track
+import com.dinaraparanid.prima.entities.Artist
 import com.dinaraparanid.prima.ui.utils.SearchAppBar
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.localization.Localization
-import com.dinaraparanid.prima.utils.localization.LocalizedString
 
 @Composable
-fun DefaultTracksAppBar(
-    tracksState: SnapshotStateList<Track>,
-    filteredTracksState: SnapshotStateList<Track>,
-    mainLabel: LocalizedString
+fun FavouriteArtistsAppBar(
+    favouriteArtistsState: SnapshotStateList<Artist>,
+    filteredFavouriteArtistsState: SnapshotStateList<Artist>
 ) {
     val isSearchingState = remember { mutableStateOf(false) }
 
     when {
         isSearchingState.value -> SearchAppBar(
-            tracksState,
-            filteredTracksState,
+            favouriteArtistsState,
+            filteredFavouriteArtistsState,
             isSearchingState,
-            onTextChanged = { q ->
-                val query = q.lowercase()
+        ) { q ->
+            val query = q.lowercase()
 
-                filteredTracksState.run {
-                    clear()
-                    addAll(tracksState.filter {
-                        val ord = Params.tracksSearchOrder
+            filteredFavouriteArtistsState.run {
+                clear()
+                addAll(favouriteArtistsState.filter { query in it.name.lowercase() })
+            }
+        }
 
-                        if (Params.TracksSearchOrder.TITLE in ord && it.title?.lowercase()?.contains(query) == true)
-                            return@filter true
-
-                        if (Params.TracksSearchOrder.ARTIST in ord && it.artist?.lowercase()?.contains(query) == true)
-                            return@filter true
-
-                        Params.TracksSearchOrder.ALBUM in ord && it.album?.lowercase()?.contains(query) == true
-                    })
-                }
-            },
-        )
-
-        else -> DefaultAppBar(isSearchingState, mainLabel)
+        else -> DefaultAppBar(isSearchingState)
     }
 }
 
 @Composable
-private fun DefaultAppBar(isSearchingState: MutableState<Boolean>, mainLabel: LocalizedString) = TopAppBar(
+private fun DefaultAppBar(isSearchingState: MutableState<Boolean>) = TopAppBar(
     modifier = Modifier.fillMaxWidth().height(60.dp),
     elevation = 10.dp
 ) {
@@ -72,7 +59,7 @@ private fun DefaultAppBar(isSearchingState: MutableState<Boolean>, mainLabel: Lo
             Spacer(modifier = Modifier.width(40.dp).fillMaxHeight())
 
             Text(
-                text = mainLabel.resource,
+                text = Localization.favourites.resource,
                 fontSize = 22.sp,
                 color = Params.secondaryAlternativeColor,
                 modifier = Modifier.align(Alignment.CenterVertically)
@@ -92,22 +79,6 @@ private fun DefaultAppBar(isSearchingState: MutableState<Boolean>, mainLabel: Lo
                         tint = Params.secondaryAlternativeColor
                     )
                 }
-
-                val isPopupMenuExpandedState = remember { mutableStateOf(false) }
-
-                IconButton(
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                    onClick = { isPopupMenuExpandedState.value = true }
-                ) {
-                    Icon(
-                        modifier = Modifier.alpha(ContentAlpha.medium).width(30.dp).height(30.dp),
-                        painter = painterResource("images/param.png"),
-                        contentDescription = Localization.search.resource,
-                        tint = Params.secondaryAlternativeColor
-                    )
-                }
-
-                SearchByParamsMenu(isPopupMenuExpandedState)
             }
         }
     }

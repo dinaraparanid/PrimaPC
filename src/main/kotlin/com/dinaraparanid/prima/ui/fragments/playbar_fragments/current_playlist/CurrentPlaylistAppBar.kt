@@ -10,4 +10,4 @@ import com.dinaraparanid.prima.utils.localization.Localization
 fun CurrentPlaylistAppBar(
     tracksState: SnapshotStateList<Track>,
     filteredTracksState: SnapshotStateList<Track>,
-) = DefaultTracksAppBar(tracksState, filteredTracksState, Localization.currentPlaylist)
+) = DefaultTracksAppBar(tracksState, filteredTracksState, Localization.currentPlaylist.resource)

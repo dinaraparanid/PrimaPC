@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dinaraparanid.prima.entities.Artist
 import com.dinaraparanid.prima.rust.RustLibs
+import com.dinaraparanid.prima.ui.utils.navigation.RootScreen
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.localization.Localization
 import com.dinaraparanid.prima.utils.localization.LocalizedString
@@ -26,7 +27,12 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun LazyItemScope.ArtistItem(artistsState: SnapshotStateList<Artist>, ind: Int) {
+fun LazyItemScope.ArtistItem(
+    rootScreen: RootScreen,
+    curArtistState: MutableState<Artist?>,
+    artistsState: SnapshotStateList<Artist>,
+    ind: Int
+) {
     val artist = artistsState[ind]
 
     Card(
@@ -38,7 +44,8 @@ fun LazyItemScope.ArtistItem(artistsState: SnapshotStateList<Artist>, ind: Int) 
     ) {
         Button(
             onClick = {
-                // TODO: Show artist's tracks
+                curArtistState.value = artist
+                rootScreen.changeConfigToArtistTracks()
             },
             modifier = Modifier.fillMaxSize().padding(3.dp),
             colors = ButtonDefaults.buttonColors(backgroundColor = Params.secondaryColor),

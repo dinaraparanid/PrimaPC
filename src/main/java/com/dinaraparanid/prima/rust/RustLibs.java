@@ -1,6 +1,7 @@
 package com.dinaraparanid.prima.rust;
 
 import com.dinaraparanid.prima.entities.Track;
+import com.dinaraparanid.prima.utils.localization.Localization;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.tag.FieldKey;
 import org.jetbrains.annotations.NotNull;
@@ -120,6 +121,17 @@ public enum RustLibs {;
 
     @NotNull
     public static final native String[] getFavouriteArtists();
+
+    @NotNull
+    private static final native String[] getAllArtistsBlocking(@NotNull final String placeholder);
+
+    @NotNull
+    public static final String[] getAllArtistsBlocking() {
+        return getAllArtistsBlocking(Localization.unknownArtist.getResource());
+    }
+
+    @NotNull
+    public static final native Track[] getArtistTracksBlocking(@NotNull final String artist);
 
     public static final int toIntPrimitive(@NotNull final Integer i) {
         return i;

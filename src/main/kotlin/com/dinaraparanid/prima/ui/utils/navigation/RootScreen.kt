@@ -33,6 +33,7 @@ class RootScreen(componentContext: ComponentContext) : AbstractScreen<ScreenElem
         Config.SettingsConfig.Fonts -> ScreenElement.Screen.SettingsScreen.Fonts
         Config.SettingsConfig.HiddenTracks -> ScreenElement.Screen.SettingsScreen.HiddenTracks
         Config.SettingsConfig.Themes -> ScreenElement.Screen.SettingsScreen.Themes
+        Config.ArtistTracks -> ScreenElement.Screen.ArtistTracks
         else -> throw IllegalArgumentException("$config not a root screen config")
     }
 
@@ -46,5 +47,6 @@ class RootScreen(componentContext: ComponentContext) : AbstractScreen<ScreenElem
     fun changeConfigToSettings()            = changeConfig(Config.MainMenuConfig.Settings)
     fun changeConfigToAboutApp()            = changeConfig(Config.MainMenuConfig.AboutApp)
     fun changeConfigToCurPlaylist()         = changeConfig(Config.PlaybarConfig.CurrentPlaylist)
+    fun changeConfigToArtistTracks()        = changeConfig(Config.ArtistTracks)
 }
 

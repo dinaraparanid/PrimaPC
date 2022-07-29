@@ -10,6 +10,7 @@ import com.arkivanov.decompose.extensions.compose.jetbrains.animation.child.chil
 import com.arkivanov.decompose.extensions.compose.jetbrains.animation.child.fade
 import com.dinaraparanid.prima.entities.Artist
 import com.dinaraparanid.prima.entities.Track
+import com.dinaraparanid.prima.ui.fragments.artists.ArtistTracksFragment
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesFragment
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesScreen
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.artists.ArtistsFragment
@@ -34,7 +35,8 @@ fun RootView(
     filteredAllArtistsState: SnapshotStateList<Artist>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>,
-    isLikedState: MutableState<Boolean>
+    isLikedState: MutableState<Boolean>,
+    curArtistState: MutableState<Artist?>
 ) = Children(
     routerState = rootScreen.routerState,
     animation = childAnimation(fade())
@@ -67,6 +69,7 @@ fun RootView(
         )
 
         ScreenElement.Screen.MainMenuScreen.Favourites -> FavouritesFragment(
+            rootScreen,
             favouritesScreen,
             currentTrackState,
             isPlayingState,
@@ -79,11 +82,26 @@ fun RootView(
             filteredAllArtistsState,
             isPlaybackTrackDraggingState,
             speedState,
-            isLikedState
+            isLikedState,
+            curArtistState
         )
 
         ScreenElement.Screen.MainMenuScreen.Artists -> ArtistsFragment(
-            allArtistsState, filteredAllArtistsState
+            rootScreen, curArtistState, allArtistsState, filteredAllArtistsState
+        )
+
+        ScreenElement.Screen.ArtistTracks -> ArtistTracksFragment(
+            curArtistState.value!!,
+            currentTrackState,
+            isPlayingState,
+            isPlayingCoverLoadedState,
+            playbackPositionState,
+            loopingState,
+            allTracksState,
+            filteredAllTracksState,
+            isPlaybackTrackDraggingState,
+            speedState,
+            isLikedState
         )
 
         // TODO: Other screens

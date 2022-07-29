@@ -54,5 +54,7 @@ interface ScreenElement {
             object TrimTrack : SettingsScreen
             object Equalizer : SettingsScreen
         }
+
+        object ArtistTracks : Screen
     }
 }

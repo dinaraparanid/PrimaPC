@@ -40,92 +40,105 @@ impl AudioScanner {
     #[inline]
     pub async fn get_all_tracks() -> Arc<Mutex<Vec<DefaultTrack>>> {
         let tracks = Arc::new(Mutex::new(Vec::new()));
-        let pool = unsafe { AUDIO_SCANNER.read().unwrap().pool.clone() };
+        let pool = unsafe { AUDIO_SCANNER.read().unwrap_unchecked().pool.clone() };
 
-        AudioScanner::search_all_tracks(
-            unsafe {
+        unsafe {
+            AudioScanner::search_all_tracks(
                 PARAMS
                     .read()
-                    .unwrap()
+                    .unwrap_unchecked()
                     .as_ref()
-                    .unwrap()
+                    .unwrap_unchecked()
                     .music_search_path
-                    .as_path()
-            },
-            tracks.clone(),
-            pool,
-        )
-        .await
-        .unwrap();
+                    .as_path(),
+                tracks.clone(),
+                pool,
+            )
+            .await
+            .unwrap_unchecked();
+        }
 
-        {
-            let mut tracks = tracks.lock().unwrap();
-            let track_order = unsafe { PARAMS.read().unwrap().as_ref().unwrap().track_order };
+        unsafe {
+            let mut tracks = tracks.lock().unwrap_unchecked();
+
+            let track_order = PARAMS
+                .read()
+                .unwrap_unchecked()
+                .as_ref()
+                .unwrap_unchecked()
+                .track_order;
 
             tracks.sort_by(|f, s| match track_order.comparator {
                 Comparator::Title => match track_order.order {
                     Ord::Asc => f
                         .get_title()
-                        .unwrap()
+                        .unwrap_unchecked()
                         .clone()
-                        .partial_cmp(&s.get_title().unwrap().clone())
-                        .unwrap(),
+                        .partial_cmp(&s.get_title().unwrap_unchecked().clone())
+                        .unwrap_unchecked(),
 
                     Ord::Desc => s
                         .get_title()
-                        .unwrap()
+                        .unwrap_unchecked()
                         .clone()
-                        .partial_cmp(&f.get_title().unwrap().clone())
-                        .unwrap(),
+                        .partial_cmp(&f.get_title().unwrap_unchecked().clone())
+                        .unwrap_unchecked(),
                 },
 
                 Comparator::Artist => match track_order.order {
                     Ord::Asc => f
                         .get_artist()
-                        .unwrap()
+                        .unwrap_unchecked()
                         .clone()
-                        .partial_cmp(&s.get_artist().unwrap().clone())
-                        .unwrap(),
+                        .partial_cmp(&s.get_artist().unwrap_unchecked().clone())
+                        .unwrap_unchecked(),
 
                     Ord::Desc => s
                         .get_artist()
-                        .unwrap()
+                        .unwrap_unchecked()
                         .clone()
-                        .partial_cmp(&f.get_artist().unwrap().clone())
-                        .unwrap(),
+                        .partial_cmp(&f.get_artist().unwrap_unchecked().clone())
+                        .unwrap_unchecked(),
                 },
 
                 Comparator::Album => match track_order.order {
                     Ord::Asc => f
                         .get_album()
-                        .unwrap()
+                        .unwrap_unchecked()
                         .clone()
-                        .partial_cmp(&s.get_album().unwrap().clone())
-                        .unwrap(),
+                        .partial_cmp(&s.get_album().unwrap_unchecked().clone())
+                        .unwrap_unchecked(),
 
                     Ord::Desc => s
                         .get_album()
-                        .unwrap()
+                        .unwrap_unchecked()
                         .clone()
-                        .partial_cmp(&f.get_album().unwrap().clone())
-                        .unwrap(),
+                        .partial_cmp(&f.get_album().unwrap_unchecked().clone())
+                        .unwrap_unchecked(),
                 },
 
                 Comparator::Date => match track_order.order {
-                    Ord::Asc => f.get_add_date().partial_cmp(s.get_add_date()).unwrap(),
-                    Ord::Desc => s.get_add_date().partial_cmp(f.get_add_date()).unwrap(),
+                    Ord::Asc => f
+                        .get_add_date()
+                        .partial_cmp(s.get_add_date())
+                        .unwrap_unchecked(),
+
+                    Ord::Desc => s
+                        .get_add_date()
+                        .partial_cmp(f.get_add_date())
+                        .unwrap_unchecked(),
                 },
 
                 Comparator::NumberInAlbum => match track_order.order {
                     Ord::Asc => f
                         .get_number_in_album()
                         .partial_cmp(&s.get_number_in_album())
-                        .unwrap(),
+                        .unwrap_unchecked(),
 
                     Ord::Desc => s
                         .get_number_in_album()
                         .partial_cmp(&f.get_number_in_album())
-                        .unwrap(),
+                        .unwrap_unchecked(),
                 },
             })
         }
@@ -135,9 +148,9 @@ impl AudioScanner {
 
     #[inline]
     pub async fn scan_file(file: &Path) -> Option<DefaultTrack> {
-        let jni_env = unsafe { &JVM.read().unwrap().jni_env }.clone();
-        let jvm = jni_env.unwrap().get_java_vm().unwrap();
-        let jni_env = jvm.attach_current_thread_permanently().unwrap();
+        let jni_env = unsafe { &JVM.read().unwrap_unchecked().jni_env }.clone();
+        let jvm = unsafe { jni_env.unwrap().get_java_vm().unwrap_unchecked() };
+        let jni_env = unsafe { jvm.attach_current_thread_permanently().unwrap_unchecked() };
         DefaultTrack::from_path(&jni_env, file.to_string_lossy().to_string())
     }
 

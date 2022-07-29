@@ -17,6 +17,7 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.dinaraparanid.prima.entities.Artist
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
+import com.dinaraparanid.prima.ui.fragments.artists.ArtistTracksAppBar
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesAppBar
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesScreen
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.artists.ArtistsAppBar
@@ -81,6 +82,12 @@ fun MainScreen() {
         val allArtistsState = remember { mutableStateListOf<Artist>() }
         val filteredAllArtistsState = remember { mutableStateListOf<Artist>() }
 
+        val curArtist = remember { mutableStateOf<Artist?>(null) }
+
+        // Artist tracks
+        val artistTrackListState = remember { mutableStateListOf<Track>() }
+        val filteredArtistTrackListState = remember { mutableStateListOf<Track>() }
+
         // Current Playlist
         val currentPlaylistTracksState = mutableStateListOf<Track>()
         val currentPlaylistFilteredTracksState = mutableStateListOf<Track>()
@@ -122,6 +129,12 @@ fun MainScreen() {
                                 filteredFavouriteTracksState,
                                 favouriteArtistsState,
                                 filteredFavouriteArtistsState
+                            )
+
+                            Config.ArtistTracks -> ArtistTracksAppBar(
+                                curArtist.value!!,
+                                artistTrackListState,
+                                filteredArtistTrackListState
                             )
 
                             // TODO: other app bars
@@ -179,7 +192,8 @@ fun MainScreen() {
                             filteredAllArtistsState,
                             isPlaybackTrackDraggingState,
                             speedState,
-                            isLikedState
+                            isLikedState,
+                            curArtist
                         )
                     }
                 }

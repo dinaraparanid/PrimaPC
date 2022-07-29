@@ -12,7 +12,7 @@ use jni::{
 
 pub trait TrackExt: TrackTrait {
     fn to_java_track<'a>(&self, env: &'a JNIEnv<'a>) -> JObject<'a>;
-    fn into_yaml(self) -> Yaml;
+    fn to_yaml(&self) -> Yaml;
 }
 
 impl<T: TrackTrait> TrackExt for T {
@@ -67,7 +67,7 @@ impl<T: TrackTrait> TrackExt for T {
     }
 
     #[inline]
-    fn into_yaml(self) -> Yaml {
+    fn to_yaml(&self) -> Yaml {
         Yaml::String(self.get_path().to_string())
     }
 }

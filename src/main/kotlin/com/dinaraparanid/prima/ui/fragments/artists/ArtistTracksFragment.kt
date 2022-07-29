@@ -1,10 +1,11 @@
-package com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.tracks
+package com.dinaraparanid.prima.ui.fragments.artists
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.dinaraparanid.prima.entities.Artist
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
 import com.dinaraparanid.prima.ui.utils.tracks.DefaultTracksFragment
@@ -13,7 +14,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 @Composable
-fun FavouriteTracksFragment(
+fun ArtistTracksFragment(
+    artist: Artist,
     currentTrackState: MutableState<Track?>,
     isPlayingState: MutableState<Boolean>,
     isPlayingCoverLoadedState: MutableState<Boolean>,
@@ -26,12 +28,12 @@ fun FavouriteTracksFragment(
     isLikedState: MutableState<Boolean>
 ) {
     rememberCoroutineScope().launch {
-        val favouriteTracks = async(Dispatchers.IO) { RustLibs.getFavouriteTracks() }
+        val tracksByArtistTask = async(Dispatchers.IO) { RustLibs.getArtistTracksBlocking(artist.name) }
 
         tracksState.clear()
         filteredTracksState.clear()
 
-        tracksState.addAll(favouriteTracks.await())
+        tracksState.addAll(tracksByArtistTask.await())
         filteredTracksState.addAll(tracksState)
     }
 

@@ -18,13 +18,12 @@ import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.ui.utils.SearchAppBar
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.localization.Localization
-import com.dinaraparanid.prima.utils.localization.LocalizedString
 
 @Composable
 fun DefaultTracksAppBar(
     tracksState: SnapshotStateList<Track>,
     filteredTracksState: SnapshotStateList<Track>,
-    mainLabel: LocalizedString
+    mainLabel: String
 ) {
     val isSearchingState = remember { mutableStateOf(false) }
 
@@ -58,7 +57,7 @@ fun DefaultTracksAppBar(
 }
 
 @Composable
-private fun DefaultAppBar(isSearchingState: MutableState<Boolean>, mainLabel: LocalizedString) = TopAppBar(
+private fun DefaultAppBar(isSearchingState: MutableState<Boolean>, mainLabel: String) = TopAppBar(
     modifier = Modifier.fillMaxWidth().height(60.dp),
     elevation = 10.dp
 ) {
@@ -72,7 +71,7 @@ private fun DefaultAppBar(isSearchingState: MutableState<Boolean>, mainLabel: Lo
             Spacer(modifier = Modifier.width(40.dp).fillMaxHeight())
 
             Text(
-                text = mainLabel.resource,
+                text = mainLabel,
                 fontSize = 22.sp,
                 color = Params.secondaryAlternativeColor,
                 modifier = Modifier.align(Alignment.CenterVertically)

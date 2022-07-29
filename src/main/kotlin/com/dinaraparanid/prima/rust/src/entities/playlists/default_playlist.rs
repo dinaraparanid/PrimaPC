@@ -47,9 +47,7 @@ impl<T: TrackTrait> From<DefaultPlaylist<T>> for Yaml {
 
         hash.insert(
             Yaml::String("tracks".to_string()),
-            Yaml::Array(Array::from_iter(
-                playlist.into_iter().map(|t| TrackExt::into_yaml(t)),
-            )),
+            Yaml::Array(Array::from_iter(playlist.into_iter().map(|t| t.to_yaml()))),
         );
 
         Yaml::Hash(hash)

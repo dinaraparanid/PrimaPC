@@ -21,6 +21,7 @@ import com.dinaraparanid.prima.entities.Artist
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.artists.FavouriteArtistsFragment
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.tracks.FavouriteTracksFragment
+import com.dinaraparanid.prima.ui.utils.navigation.RootScreen
 import com.dinaraparanid.prima.ui.utils.navigation.ScreenElement
 import com.dinaraparanid.prima.utils.Params
 import com.dinaraparanid.prima.utils.localization.Localization
@@ -28,6 +29,7 @@ import com.dinaraparanid.prima.utils.localization.Localization
 @OptIn(ExperimentalDecomposeApi::class)
 @Composable
 fun FavouritesFragment(
+    rootScreen: RootScreen,
     favouritesScreen: FavouritesScreen,
     currentTrackState: MutableState<Track?>,
     isPlayingState: MutableState<Boolean>,
@@ -40,7 +42,8 @@ fun FavouritesFragment(
     filteredArtistsState: SnapshotStateList<Artist>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>,
-    isLikedState: MutableState<Boolean>
+    isLikedState: MutableState<Boolean>,
+    curArtistState: MutableState<Artist?>
 ) {
     Column(Modifier.fillMaxSize()) {
         BottomNavigation(
@@ -96,7 +99,10 @@ fun FavouritesFragment(
                 )
 
                 ScreenElement.Screen.FavouritesScreen.Artists -> FavouriteArtistsFragment(
-                    artistsState, filteredArtistsState
+                    rootScreen,
+                    curArtistState,
+                    artistsState,
+                    filteredArtistsState
                 )
 
                 ScreenElement.Screen.FavouritesScreen.TrackCollections -> Unit

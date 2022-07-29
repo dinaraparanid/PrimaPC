@@ -19,7 +19,7 @@ mod tests;
 
 use diesel::RunQueryDsl;
 use futures::executor::block_on;
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{collections::HashSet, path::PathBuf, sync::Arc, time::Duration};
 
 use crate::{
     audio_player::audio_player::AUDIO_PLAYER,
@@ -817,4 +817,69 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getFavouriteAr
     });
 
     arr
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllArtistsBlocking(
+    env: JNIEnv,
+    _class: jclass,
+    placeholder: JString,
+) -> jobjectArray {
+    let tracks = block_on(AudioScanner::get_all_tracks());
+    let tracks = unsafe { tracks.lock().unwrap_unchecked() };
+
+    let mut artists = tracks
+        .iter()
+        .filter_map(|track| track.get_artist())
+        .collect::<HashSet<_>>();
+
+    let isEmptyArtist = artists.remove(&"".to_string());
+
+    let mut artists = artists.into_iter().collect::<Vec<_>>();
+    artists.sort_unstable();
+
+    let mut artists = artists
+        .into_iter()
+        .map(|string| unsafe { env.new_string(string.clone()).unwrap_unchecked() })
+        .collect::<Vec<_>>();
+
+    if isEmptyArtist {
+        artists.push(placeholder)
+    }
+
+    let arr = unsafe {
+        env.new_object_array(artists.len() as jsize, "java/lang/String", JObject::null())
+            .unwrap_unchecked()
+    };
+
+    artists
+        .into_iter()
+        .enumerate()
+        .for_each(|(ind, artist)| unsafe {
+            env.set_object_array_element(arr, ind as jsize, artist)
+                .unwrap_unchecked()
+        });
+
+    arr
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getArtistTracksBlocking(
+    env: JNIEnv,
+    _class: jclass,
+    artist: JString,
+) -> jobjectArray {
+    let artist = String::from_jstring(&env, artist);
+
+    block_on(AudioScanner::get_all_tracks())
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|track| track.get_artist().is_some())
+        .filter(|track| unsafe { artist == *track.get_artist().unwrap_unchecked() })
+        .collect::<Vec<_>>()
+        .into_iter()
+        .into_jobject_array(&env)
 }

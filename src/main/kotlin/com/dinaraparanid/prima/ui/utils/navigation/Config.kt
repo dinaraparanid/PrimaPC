@@ -98,4 +98,7 @@ sealed interface Config : Parcelable {
         @Parcelize
         object Equalizer : SettingsConfig
     }
+
+    @Parcelize
+    object ArtistTracks : Config
 }

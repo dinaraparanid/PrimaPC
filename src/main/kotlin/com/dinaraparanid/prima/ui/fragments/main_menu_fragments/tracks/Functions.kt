@@ -12,14 +12,21 @@ suspend fun scanTracks(tracksState: SnapshotStateList<Track>, filteredTracksStat
         }
 
         launch {
-            tracksState.run {
-                clear()
-                addAll(tracksTask.await())
-            }
+            tracksState.clear()
+            filteredTracksState.clear()
 
-            filteredTracksState.run {
-                clear()
-                addAll(tracksState)
-            }
+            tracksState.addAll(tracksTask.await())
+            filteredTracksState.addAll(tracksState)
         }
     }
+
+suspend fun scanTracks(tracksState: SnapshotStateList<Track>) = coroutineScope {
+    val tracksTask = async(Dispatchers.IO) {
+        RustLibs.getAllTracksBlocking()
+    }
+
+    launch {
+        tracksState.clear()
+        tracksState.addAll(tracksTask.await())
+    }
+}

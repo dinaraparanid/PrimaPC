@@ -8,10 +8,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
 import com.dinaraparanid.prima.ui.utils.tracks.DraggableTrackList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 
 @Composable
 fun CurrentPlaylistFragment(
@@ -27,18 +24,14 @@ fun CurrentPlaylistFragment(
     isLikedState: MutableState<Boolean>
 ) {
     rememberCoroutineScope().launch {
-        withContext(Dispatchers.IO) {
-            RustLibs.getCurPlaylist()?.toList()
-        }?.let {
-            currentPlaylistTracksState.run {
-                clear()
-                addAll(it)
-            }
+        val playlistTracksTask = async(Dispatchers.IO) { RustLibs.getCurPlaylist() }
 
-            currentPlaylistFilteredTracksState.run {
-                clear()
-                addAll(it)
-            }
+        currentPlaylistTracksState.clear()
+        currentPlaylistFilteredTracksState.clear()
+
+        playlistTracksTask.await()?.let {
+            currentPlaylistTracksState.addAll(it)
+            currentPlaylistFilteredTracksState.addAll(it)
         }
     }
 

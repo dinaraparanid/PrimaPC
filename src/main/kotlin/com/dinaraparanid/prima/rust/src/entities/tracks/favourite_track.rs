@@ -2,13 +2,15 @@ extern crate chrono;
 extern crate jni;
 
 use crate::{
-    databases::favourites::daos::favourite_track_dao::FavouriteTrackDBEntity,
-    entities::{favourable::Favourable, tracks::track_trait::TrackTrait},
+    databases::{
+        db_entity::DBEntity, favourites::daos::favourite_track_dao::FavouriteTrackDBEntity,
+    },
+    entities::favourable::Favourable,
+    impl_track_traits,
     utils::{extensions::path_buf_ext::PathBufExt, wrappers::jtrack::JTrack},
     DefaultTrack,
 };
 
-use crate::databases::db_entity::DBEntity;
 use chrono::{DateTime, Duration, Local};
 use jni::sys::jshort;
 use std::path::PathBuf;
@@ -24,79 +26,7 @@ pub struct FavouriteTrack {
     number_in_album: jshort,
 }
 
-impl TrackTrait for FavouriteTrack {
-    #[inline]
-    fn get_title(&self) -> Option<&String> {
-        self.title.as_ref()
-    }
-
-    #[inline]
-    fn get_artist(&self) -> Option<&String> {
-        self.artist.as_ref()
-    }
-
-    #[inline]
-    fn get_album(&self) -> Option<&String> {
-        self.album.as_ref()
-    }
-
-    #[inline]
-    fn get_path(&self) -> &PathBuf {
-        &self.path
-    }
-
-    #[inline]
-    fn get_duration(&self) -> &Duration {
-        &self.duration
-    }
-
-    #[inline]
-    fn get_add_date(&self) -> &DateTime<Local> {
-        &self.add_date
-    }
-
-    #[inline]
-    fn get_number_in_album(&self) -> i16 {
-        self.number_in_album
-    }
-}
-
-impl TrackTrait for &FavouriteTrack {
-    #[inline]
-    fn get_title(&self) -> Option<&String> {
-        self.title.as_ref()
-    }
-
-    #[inline]
-    fn get_artist(&self) -> Option<&String> {
-        self.artist.as_ref()
-    }
-
-    #[inline]
-    fn get_album(&self) -> Option<&String> {
-        self.album.as_ref()
-    }
-
-    #[inline]
-    fn get_path(&self) -> &PathBuf {
-        &self.path
-    }
-
-    #[inline]
-    fn get_duration(&self) -> &Duration {
-        &self.duration
-    }
-
-    #[inline]
-    fn get_add_date(&self) -> &DateTime<Local> {
-        &self.add_date
-    }
-
-    #[inline]
-    fn get_number_in_album(&self) -> i16 {
-        self.number_in_album
-    }
-}
+impl_track_traits!(FavouriteTrack);
 
 impl DBEntity for FavouriteTrack {
     type PrimaryKey = PathBuf;
@@ -113,13 +43,6 @@ impl DBEntity for &FavouriteTrack {
     #[inline]
     fn get_key(&self) -> &PathBuf {
         &self.path
-    }
-}
-
-impl PartialEq for FavouriteTrack {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        self.path.eq(other.get_path())
     }
 }
 

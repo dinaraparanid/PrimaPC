@@ -1,26 +1,11 @@
-use crate::{
-    entities::artists::{artist_trait::ArtistTrait, favourite_artist::FavouriteArtist},
-    Favourable,
-};
+use crate::{entities::artists::favourite_artist::FavouriteArtist, impl_artist_traits, Favourable};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct DefaultArtist {
     name: String,
 }
 
-impl ArtistTrait for DefaultArtist {
-    #[inline]
-    fn get_name(&self) -> &String {
-        &self.name
-    }
-}
-
-impl ArtistTrait for &DefaultArtist {
-    #[inline]
-    fn get_name(&self) -> &String {
-        &self.name
-    }
-}
+impl_artist_traits!(DefaultArtist);
 
 impl Favourable<FavouriteArtist> for DefaultArtist {
     #[inline]

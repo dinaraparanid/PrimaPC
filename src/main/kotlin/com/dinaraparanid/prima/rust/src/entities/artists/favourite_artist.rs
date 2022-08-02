@@ -2,8 +2,8 @@ extern crate serde;
 
 use crate::{
     databases::{db_entity::DBEntity, favourites::schema::favourite_artists},
-    entities::artists::{artist_trait::ArtistTrait, default_artist::DefaultArtist},
-    Favourable,
+    entities::artists::default_artist::DefaultArtist,
+    impl_artist_traits, Favourable,
 };
 
 use serde::{Deserialize, Serialize};
@@ -16,19 +16,7 @@ pub struct FavouriteArtist {
     name: String,
 }
 
-impl ArtistTrait for FavouriteArtist {
-    #[inline]
-    fn get_name(&self) -> &String {
-        &self.name
-    }
-}
-
-impl ArtistTrait for &FavouriteArtist {
-    #[inline]
-    fn get_name(&self) -> &String {
-        &self.name
-    }
-}
+impl_artist_traits!(FavouriteArtist);
 
 impl DBEntity for FavouriteArtist {
     type PrimaryKey = String;

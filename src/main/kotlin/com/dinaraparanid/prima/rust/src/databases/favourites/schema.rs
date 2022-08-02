@@ -24,8 +24,4 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(
-    favourite_artists,
-    favourite_playlists,
-    favourite_tracks,
-);
+allow_tables_to_appear_in_same_query!(favourite_artists, favourite_playlists, favourite_tracks,);

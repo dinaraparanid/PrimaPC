@@ -1,16 +1,19 @@
 use crate::{
-    entities::playlists::{default_playlist::DefaultPlaylist, playlist_type::PlaylistType},
+    entities::playlists::{
+        default_playlist::DefaultPlaylist, favourite_playlist::FavouritePlaylist,
+        playlist_type::PlaylistType,
+    },
     utils::extensions::path_buf_ext::PathBufExt,
-    TrackTrait,
+    TrackExt,
 };
 
 use std::fmt::{Debug, Formatter};
 
 mod private {
-    use crate::TrackTrait;
+    use crate::TrackExt;
     use std::fmt::Debug;
 
-    pub trait PrivatePlaylistTrait<T: TrackTrait>:
+    pub trait PrivatePlaylistTrait<T: TrackExt>:
         FromIterator<T> + IntoIterator + Extend<T> + Clone + Debug + Default
     {
         fn set_cur_index(&mut self, new_index: usize);
@@ -18,7 +21,7 @@ mod private {
     }
 }
 
-pub trait PlaylistTrait<T: TrackTrait>: private::PrivatePlaylistTrait<T> {
+pub trait PlaylistTrait<T: TrackExt>: private::PrivatePlaylistTrait<T> {
     fn get_title(&self) -> Option<&String>;
     fn get_type(&self) -> PlaylistType;
     fn get_cur_ind(&self) -> usize;
@@ -162,10 +165,10 @@ pub trait PlaylistTrait<T: TrackTrait>: private::PrivatePlaylistTrait<T> {
     }
 }
 
-impl<T: TrackTrait> Clone for DefaultPlaylist<T> {
+impl<T: TrackExt> Clone for DefaultPlaylist<T> {
     #[inline]
     fn clone(&self) -> Self {
-        DefaultPlaylist::new(
+        Self::new(
             self.get_title().map(|title| title.clone()),
             self.get_type(),
             self.get_tracks().clone(),
@@ -174,7 +177,20 @@ impl<T: TrackTrait> Clone for DefaultPlaylist<T> {
     }
 }
 
-impl<T: TrackTrait> Debug for DefaultPlaylist<T> {
+impl<T: TrackExt> Clone for FavouritePlaylist<T> {
+    #[inline]
+    fn clone(&self) -> Self {
+        Self::new(
+            self.get_id(),
+            self.get_title().map(|title| title.clone()),
+            self.get_type(),
+            self.get_tracks().clone(),
+            self.get_cur_ind(),
+        )
+    }
+}
+
+impl<T: TrackExt> Debug for DefaultPlaylist<T> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DefaultPlaylist")
@@ -186,21 +202,60 @@ impl<T: TrackTrait> Debug for DefaultPlaylist<T> {
     }
 }
 
-impl<Tr: TrackTrait> FromIterator<Tr> for DefaultPlaylist<Tr> {
+impl<T: TrackExt> Debug for FavouritePlaylist<T> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FavouritePlaylist")
+            .field("id", &self.get_id())
+            .field("title", &self.get_title())
+            .field("type", &self.get_type())
+            .field("tracks", &self.get_tracks())
+            .field("current index", &self.get_cur_ind())
+            .finish()
+    }
+}
+
+impl<Tr: TrackExt> FromIterator<Tr> for DefaultPlaylist<Tr> {
     #[inline]
     fn from_iter<T: IntoIterator<Item = Tr>>(iter: T) -> Self {
-        DefaultPlaylist::new(None, PlaylistType::default(), Vec::from_iter(iter), 0)
+        Self::new(None, PlaylistType::default(), Vec::from_iter(iter), 0)
     }
 }
 
-impl<T: TrackTrait> Default for DefaultPlaylist<T> {
+impl<Tr: TrackExt> FromIterator<Tr> for FavouritePlaylist<Tr> {
+    #[inline]
+    fn from_iter<T: IntoIterator<Item = Tr>>(iter: T) -> Self {
+        Self::new(-1, None, PlaylistType::default(), Vec::from_iter(iter), 0)
+    }
+}
+
+impl<T: TrackExt> Default for DefaultPlaylist<T> {
     #[inline]
     fn default() -> Self {
-        DefaultPlaylist::new(None, PlaylistType::default(), vec![], 0)
+        Self::new(None, PlaylistType::default(), vec![], 0)
     }
 }
 
-impl<T: TrackTrait> private::PrivatePlaylistTrait<T> for DefaultPlaylist<T> {
+impl<T: TrackExt> Default for FavouritePlaylist<T> {
+    #[inline]
+    fn default() -> Self {
+        Self::new(-1, None, PlaylistType::default(), vec![], 0)
+    }
+}
+
+impl<T: TrackExt> private::PrivatePlaylistTrait<T> for DefaultPlaylist<T> {
+    #[inline]
+    fn set_cur_index(&mut self, new_index: usize) {
+        self.set_cur_ind(new_index)
+    }
+
+    #[inline]
+    fn get_tracks_mut(&mut self) -> &mut Vec<T> {
+        self.get_tracks_mut()
+    }
+}
+
+impl<T: TrackExt> private::PrivatePlaylistTrait<T> for FavouritePlaylist<T> {
     #[inline]
     fn set_cur_index(&mut self, new_index: usize) {
         self.set_cur_ind(new_index)

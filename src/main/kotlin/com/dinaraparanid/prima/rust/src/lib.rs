@@ -29,7 +29,9 @@ use crate::{
         entity_dao::EntityDao,
         favourites::{
             daos::{
-                favourite_artist_dao::FavouriteArtistDao, favourite_track_dao::FavouriteTrackDao,
+                favourite_artist_dao::FavouriteArtistDao,
+                favourite_playlist_dao::{FavouritePlaylistDBEntity, FavouritePlaylistDao},
+                favourite_track_dao::FavouriteTrackDao,
             },
             db::establish_connection,
         },
@@ -114,7 +116,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_hello(
     _class: jclass,
     name: JString,
 ) -> jstring {
-    let name = String::from_jstring(&env, name);
+    let name = unsafe { String::from_jstring_unchecked(&env, name) };
 
     env.new_string(format!("Hello, {}!", name))
         .unwrap()
@@ -582,7 +584,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setMusicSearch
     _class: jclass,
     path: JString,
 ) {
-    let path = String::from_jstring(&env, path);
+    let path = unsafe { String::from_jstring_unchecked(&env, path) };
     unsafe { PARAMS.write().unwrap().as_mut().unwrap().music_search_path = PathBuf::from(path) }
 }
 
@@ -753,7 +755,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_artistImageBin
     name: JString,
 ) -> jstring {
     env.new_string(String::from_iter(
-        String::from_jstring(&env, name)
+        unsafe { String::from_jstring_unchecked(&env, name) }
             .trim()
             .split_whitespace()
             .into_iter()
@@ -772,7 +774,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onLikeArtistCl
     _class: jclass,
     artist: JString,
 ) {
-    let artist = FavouriteArtist::new(String::from_jstring(&env, artist));
+    let artist = FavouriteArtist::new(unsafe { String::from_jstring_unchecked(&env, artist) });
     let connection = establish_connection().unwrap();
 
     if FavouriteArtistDao::get_by_key(artist.get_key().clone(), &connection).is_some() {
@@ -789,7 +791,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isArtistLiked(
     _class: jclass,
     artist: JString,
 ) -> jboolean {
-    let artist = FavouriteArtist::new(String::from_jstring(&env, artist));
+    let artist = FavouriteArtist::new(unsafe { String::from_jstring_unchecked(&env, artist) });
     let connection = establish_connection().unwrap();
     jboolean::from(FavouriteArtistDao::get_by_key(artist.get_key().clone(), &connection).is_some())
 }
@@ -871,7 +873,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getArtistTrack
     _class: jclass,
     artist: JString,
 ) -> jobjectArray {
-    let artist = String::from_jstring(&env, artist);
+    let artist = unsafe { String::from_jstring_unchecked(&env, artist) };
 
     block_on(AudioScanner::get_all_tracks())
         .lock()
@@ -882,4 +884,65 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getArtistTrack
         .collect::<Vec<_>>()
         .into_iter()
         .into_jobject_array(&env)
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onLikePlaylistClicked(
+    env: JNIEnv,
+    _class: jclass,
+    id: JObject,
+    title: JString,
+    tp: jint,
+) {
+    let title = String::from_jstring(&env, title);
+    let tp = tp as i32;
+    let connection = establish_connection().unwrap();
+
+    if id.is_null() {
+        FavouritePlaylistDao::insert(
+            vec![FavouritePlaylistDBEntity::new(None, title, tp)],
+            &connection,
+        )
+    } else {
+        let id = Some(
+            env.call_method(id, "intValue", "()I", &[])
+                .unwrap()
+                .i()
+                .unwrap(),
+        );
+
+        if FavouritePlaylistDao::get_by_key(id.clone(), &connection).is_some() {
+            FavouritePlaylistDao::remove(
+                vec![FavouritePlaylistDBEntity::new(id, title, tp)],
+                &connection,
+            )
+        } else {
+            FavouritePlaylistDao::insert(
+                vec![FavouritePlaylistDBEntity::new(id, title, tp)],
+                &connection,
+            )
+        }
+    }
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isPlaylistLiked(
+    env: JNIEnv,
+    _class: jclass,
+    id: JObject,
+) -> jboolean {
+    jboolean::from(if id.is_null() {
+        false
+    } else {
+        let id = Some(
+            env.call_method(id, "intValue", "()I", &[])
+                .unwrap()
+                .i()
+                .unwrap(),
+        );
+
+        FavouritePlaylistDao::get_by_key(id.clone(), &establish_connection().unwrap()).is_some()
+    })
 }

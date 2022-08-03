@@ -212,3 +212,52 @@ macro_rules! impl_playlist_methods {
         }
     };
 }
+
+#[macro_export]
+macro_rules! impl_dao {
+    ($pk_type:ty, $pk_ident:ident, $pk_getter_move:expr, $pk_getter_clone:expr, $entity_type:ty, $entity_dao_type:ty, $dsl:ident) => {
+        impl crate::EntityDao<$pk_type, $entity_type> for $entity_dao_type {
+            #[inline]
+            fn get_all(conn: &diesel::SqliteConnection) -> Vec<$entity_type> {
+                use diesel::prelude::*;
+                $dsl.load(conn).unwrap_or_default()
+            }
+
+            #[inline]
+            fn get_by_key(key: $pk_type, conn: &diesel::SqliteConnection) -> Option<$entity_type> {
+                use diesel::prelude::*;
+                $dsl.find(key).first(conn).ok()
+            }
+
+            #[inline]
+            fn insert(entities: Vec<$entity_type>, conn: &diesel::SqliteConnection) {
+                use diesel::prelude::*;
+                diesel::insert_into($dsl)
+                    .values(entities)
+                    .execute(conn)
+                    .unwrap_or_default();
+            }
+
+            #[inline]
+            fn remove(entities: Vec<$entity_type>, conn: &diesel::SqliteConnection) {
+                use diesel::prelude::*;
+                entities.into_iter().for_each(|t| {
+                    diesel::delete($dsl.filter(dsl::$pk_ident.eq($pk_getter_move(t))))
+                        .execute(conn)
+                        .unwrap_or_default();
+                });
+            }
+
+            #[inline]
+            fn update(new_entities: Vec<$entity_type>, conn: &diesel::SqliteConnection) {
+                use diesel::prelude::*;
+                new_entities.into_iter().for_each(|t| {
+                    diesel::update($dsl.filter(dsl::$pk_ident.eq($pk_getter_clone(&t))))
+                        .set(t)
+                        .execute(conn)
+                        .unwrap_or_default();
+                })
+            }
+        }
+    };
+}

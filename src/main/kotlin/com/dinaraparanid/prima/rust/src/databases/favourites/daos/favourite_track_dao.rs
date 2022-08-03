@@ -13,11 +13,12 @@ use crate::{
         },
     },
     entities::tracks::favourite_track::FavouriteTrack,
+    impl_dao,
     utils::extensions::path_buf_ext::PathBufExt,
 };
 
 use chrono::{DateTime, Duration};
-use diesel::{prelude::*, SqliteConnection};
+use diesel::SqliteConnection;
 use jni::sys::jshort;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -25,13 +26,13 @@ use std::path::PathBuf;
 #[derive(Clone, Debug, Deserialize, Serialize, Queryable, Insertable, AsChangeset)]
 #[table_name = "favourite_tracks"]
 pub(crate) struct FavouriteTrackDBEntity {
-    pub title: Option<String>,
-    pub artist: Option<String>,
-    pub album: Option<String>,
-    pub path: String,
-    pub duration: i64,
-    pub add_date: i64,
-    pub number_in_album: i32,
+    title: Option<String>,
+    artist: Option<String>,
+    album: Option<String>,
+    path: String,
+    duration: i64,
+    add_date: i64,
+    number_in_album: i32,
 }
 
 pub struct FavouriteTrackDao;
@@ -69,44 +70,38 @@ impl From<FavouriteTrack> for FavouriteTrackDBEntity {
     }
 }
 
-impl EntityDao<String, FavouriteTrackDBEntity> for FavouriteTrackDao {
+impl FavouriteTrackDBEntity {
     #[inline]
-    fn get_all(conn: &SqliteConnection) -> Vec<FavouriteTrackDBEntity> {
-        tracks_dsl.load(conn).unwrap_or(vec![])
-    }
-
-    #[inline]
-    fn get_by_key(key: String, conn: &SqliteConnection) -> Option<FavouriteTrackDBEntity> {
-        tracks_dsl.find(key).first(conn).ok()
-    }
-
-    #[inline]
-    fn insert(entities: Vec<FavouriteTrackDBEntity>, conn: &SqliteConnection) {
-        diesel::insert_into(tracks_dsl)
-            .values(entities)
-            .execute(conn)
-            .unwrap_or_default();
-    }
-
-    #[inline]
-    fn remove(entities: Vec<FavouriteTrackDBEntity>, conn: &SqliteConnection) {
-        entities.into_iter().for_each(|t| {
-            diesel::delete(tracks_dsl.filter(dsl::path.eq(t.path)))
-                .execute(conn)
-                .unwrap_or_default();
-        });
-    }
-
-    #[inline]
-    fn update(new_entities: Vec<FavouriteTrackDBEntity>, conn: &SqliteConnection) {
-        new_entities.into_iter().for_each(|t| {
-            diesel::update(tracks_dsl.filter(dsl::path.eq(t.path.clone())))
-                .set(t)
-                .execute(conn)
-                .unwrap_or_default();
-        })
+    pub fn new(
+        title: Option<String>,
+        artist: Option<String>,
+        album: Option<String>,
+        path: String,
+        duration: i64,
+        add_date: i64,
+        number_in_album: i32,
+    ) -> Self {
+        Self {
+            title,
+            artist,
+            album,
+            path,
+            duration,
+            add_date,
+            number_in_album,
+        }
     }
 }
+
+impl_dao!(
+    String,
+    path,
+    |t: FavouriteTrackDBEntity| t.path,
+    |t: &FavouriteTrackDBEntity| t.path.clone(),
+    FavouriteTrackDBEntity,
+    FavouriteTrackDao,
+    tracks_dsl
+);
 
 impl EntityDao<PathBuf, FavouriteTrack> for FavouriteTrackDao {
     #[inline]

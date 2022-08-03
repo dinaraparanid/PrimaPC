@@ -14,17 +14,37 @@ pub(crate) trait StringExt {
         .to_string()
     }
 
+    /// Creates string from jstring without any null checks
+    ///
+    /// # Arguments
+    /// jstring - String from java
+    ///
+    /// # Safety
+    /// jstring should not be null
+    ///
+    /// # Return
+    /// Rust's string from given Java's string
+
+    #[inline]
+    unsafe fn from_jstring_unchecked(env: &JNIEnv, jstring: JString) -> String {
+        env.get_string(jstring).unwrap().into()
+    }
+
     /// Creates string from jstring
     ///
     /// # Arguments
     /// jstring - String from java
     ///
     /// # Return
-    /// Rust's string from give Java's string
+    /// Rust's string from given Java's string or None if jstring was null
 
     #[inline]
-    fn from_jstring(env: &JNIEnv, jstring: JString) -> String {
-        env.get_string(jstring).unwrap().into()
+    fn from_jstring(env: &JNIEnv, jstring: JString) -> Option<String> {
+        if jstring.is_null() {
+            None
+        } else {
+            unsafe { Some(Self::from_jstring_unchecked(env, jstring)) }
+        }
     }
 }
 

@@ -110,14 +110,14 @@ impl FavouriteTrack {
 
     #[inline]
     pub(crate) fn into_db_entity(self) -> FavouriteTrackDBEntity {
-        FavouriteTrackDBEntity {
-            title: self.title,
-            artist: self.artist,
-            album: self.album,
-            path: self.path.to_string(),
-            duration: self.duration.num_milliseconds(),
-            add_date: self.add_date.timestamp_millis(),
-            number_in_album: self.number_in_album as i32,
-        }
+        FavouriteTrackDBEntity::new(
+            self.title,
+            self.artist,
+            self.album,
+            self.path.to_string(),
+            self.duration.num_milliseconds(),
+            self.add_date.timestamp_millis(),
+            self.number_in_album as i32,
+        )
     }
 }

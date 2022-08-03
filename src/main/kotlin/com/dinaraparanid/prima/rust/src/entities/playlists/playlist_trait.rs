@@ -225,7 +225,7 @@ impl<Tr: TrackExt> FromIterator<Tr> for DefaultPlaylist<Tr> {
 impl<Tr: TrackExt> FromIterator<Tr> for FavouritePlaylist<Tr> {
     #[inline]
     fn from_iter<T: IntoIterator<Item = Tr>>(iter: T) -> Self {
-        Self::new(-1, None, PlaylistType::default(), Vec::from_iter(iter), 0)
+        Self::new(None, None, PlaylistType::default(), Vec::from_iter(iter), 0)
     }
 }
 
@@ -239,7 +239,7 @@ impl<T: TrackExt> Default for DefaultPlaylist<T> {
 impl<T: TrackExt> Default for FavouritePlaylist<T> {
     #[inline]
     fn default() -> Self {
-        Self::new(-1, None, PlaylistType::default(), vec![], 0)
+        Self::new(None, None, PlaylistType::default(), vec![], 0)
     }
 }
 

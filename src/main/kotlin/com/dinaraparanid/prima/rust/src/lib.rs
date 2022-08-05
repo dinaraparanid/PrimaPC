@@ -17,7 +17,7 @@ pub mod utils;
 #[cfg(test)]
 mod tests;
 
-use diesel::RunQueryDsl;
+use diesel::prelude::*;
 use futures::executor::block_on;
 use std::{collections::HashSet, path::PathBuf, sync::Arc, time::Duration};
 

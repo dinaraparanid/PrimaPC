@@ -284,4 +284,12 @@ object Localization {
         be = "Схаваць артыста",
         zh = "隐藏艺术家"
     )
+
+    @JvmField
+    val loading = resource(
+        en = "Loading",
+        ru = "Загрузка",
+        be = "Загрузка",
+        zh = "装载量"
+    )
 }

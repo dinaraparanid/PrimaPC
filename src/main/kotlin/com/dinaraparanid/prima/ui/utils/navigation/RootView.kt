@@ -11,9 +11,9 @@ import com.arkivanov.decompose.extensions.compose.jetbrains.animation.child.fade
 import com.dinaraparanid.prima.entities.Artist
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.ui.fragments.artists.ArtistTracksFragment
+import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.artists.ArtistsFragment
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesFragment
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.FavouritesScreen
-import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.artists.ArtistsFragment
 import com.dinaraparanid.prima.ui.fragments.main_menu_fragments.tracks.TracksFragment
 import com.dinaraparanid.prima.ui.fragments.playbar_fragments.current_playlist.CurrentPlaylistFragment
 

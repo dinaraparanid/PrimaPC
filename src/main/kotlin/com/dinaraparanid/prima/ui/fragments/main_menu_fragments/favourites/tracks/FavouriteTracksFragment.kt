@@ -1,12 +1,10 @@
 package com.dinaraparanid.prima.ui.fragments.main_menu_fragments.favourites.tracks
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
+import com.dinaraparanid.prima.ui.utils.AwaitDialog
 import com.dinaraparanid.prima.ui.utils.tracks.DefaultTracksFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -25,6 +23,8 @@ fun FavouriteTracksFragment(
     speedState: State<Float>,
     isLikedState: MutableState<Boolean>
 ) {
+    val isLoadingState = mutableStateOf(true)
+
     rememberCoroutineScope().launch {
         val favouriteTracks = async(Dispatchers.IO) { RustLibs.getFavouriteTracks() }
 
@@ -33,7 +33,10 @@ fun FavouriteTracksFragment(
 
         tracksState.addAll(favouriteTracks.await())
         filteredTracksState.addAll(tracksState)
+        isLoadingState.value = false
     }
+
+    AwaitDialog(isDialogShownState = isLoadingState)
 
     DefaultTracksFragment(
         currentTrackState,

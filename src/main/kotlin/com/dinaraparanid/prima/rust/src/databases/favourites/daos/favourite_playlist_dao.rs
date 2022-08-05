@@ -57,6 +57,21 @@ impl FavouritePlaylistDBEntity {
     pub fn new(id: Option<i32>, title: Option<String>, tp: i32) -> Self {
         Self { id, title, tp }
     }
+
+    #[inline]
+    pub fn get_id(&self) -> &Option<i32> {
+        &self.id
+    }
+
+    #[inline]
+    pub fn get_title(&self) -> &Option<String> {
+        &self.title
+    }
+
+    #[inline]
+    pub fn get_type(&self) -> i32 {
+        self.tp
+    }
 }
 
 impl_dao!(

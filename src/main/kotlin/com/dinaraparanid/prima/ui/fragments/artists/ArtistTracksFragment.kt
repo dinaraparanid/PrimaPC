@@ -1,14 +1,13 @@
 package com.dinaraparanid.prima.ui.fragments.artists
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.dinaraparanid.prima.entities.Artist
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
+import com.dinaraparanid.prima.ui.utils.AwaitDialog
 import com.dinaraparanid.prima.ui.utils.tracks.DefaultTracksFragment
+import com.dinaraparanid.prima.utils.localization.Localization
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -27,6 +26,8 @@ fun ArtistTracksFragment(
     speedState: State<Float>,
     isLikedState: MutableState<Boolean>
 ) {
+    val isLoadingState = mutableStateOf(true)
+
     rememberCoroutineScope().launch {
         val tracksByArtistTask = async(Dispatchers.IO) { RustLibs.getArtistTracksBlocking(artist.name) }
 
@@ -35,7 +36,10 @@ fun ArtistTracksFragment(
 
         tracksState.addAll(tracksByArtistTask.await())
         filteredTracksState.addAll(tracksState)
+        isLoadingState.value = false
     }
+
+    AwaitDialog(isDialogShownState = isLoadingState)
 
     DefaultTracksFragment(
         currentTrackState,

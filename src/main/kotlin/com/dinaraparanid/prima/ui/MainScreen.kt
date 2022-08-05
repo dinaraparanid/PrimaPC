@@ -29,10 +29,11 @@ import com.dinaraparanid.prima.ui.utils.navigation.RootScreen
 import com.dinaraparanid.prima.ui.utils.navigation.RootView
 import com.dinaraparanid.prima.utils.Params
 import kotlinx.coroutines.*
+import java.awt.Window
 
 @Composable
 @Preview
-fun MainScreen() {
+fun MainScreen(owner: Window) {
     val primary = Params.primaryColor
     val secondary = Params.secondaryColor
 

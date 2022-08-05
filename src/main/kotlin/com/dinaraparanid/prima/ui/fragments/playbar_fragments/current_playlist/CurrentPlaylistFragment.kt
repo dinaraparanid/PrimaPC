@@ -1,12 +1,10 @@
 package com.dinaraparanid.prima.ui.fragments.playbar_fragments.current_playlist
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.dinaraparanid.prima.entities.Track
 import com.dinaraparanid.prima.rust.RustLibs
+import com.dinaraparanid.prima.ui.utils.AwaitDialog
 import com.dinaraparanid.prima.ui.utils.tracks.DraggableTrackList
 import kotlinx.coroutines.*
 
@@ -23,6 +21,8 @@ fun CurrentPlaylistFragment(
     speedState: State<Float>,
     isLikedState: MutableState<Boolean>
 ) {
+    val isLoadingState = mutableStateOf(true)
+
     rememberCoroutineScope().launch {
         val playlistTracksTask = async(Dispatchers.IO) { RustLibs.getCurPlaylist() }
 
@@ -33,7 +33,11 @@ fun CurrentPlaylistFragment(
             currentPlaylistTracksState.addAll(it)
             currentPlaylistFilteredTracksState.addAll(it)
         }
+
+        isLoadingState.value = false
     }
+
+    AwaitDialog(isDialogShownState = isLoadingState)
 
     DraggableTrackList(
         currentPlaylistTracksState,

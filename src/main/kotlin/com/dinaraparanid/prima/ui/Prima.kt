@@ -28,7 +28,7 @@ fun Prima() {
                 exitApplication()
             },
         ) {
-            MainScreen()
+            MainScreen(window)
         }
     }
 }

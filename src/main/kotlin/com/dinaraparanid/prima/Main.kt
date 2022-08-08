@@ -2,4 +2,9 @@ package com.dinaraparanid.prima
 
 import com.dinaraparanid.prima.ui.Prima
 
-fun main() = Prima()
+class Main {
+    companion object {
+        @JvmStatic
+        fun main(args: Array<String>) = Prima()
+    }
+}

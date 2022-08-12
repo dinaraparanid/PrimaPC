@@ -3,33 +3,33 @@ extern crate futures;
 extern crate futures_timer;
 extern crate once_cell;
 extern crate rodio;
+extern crate tokio;
 
 use atomic_float::AtomicF32;
+use futures::future::{AbortHandle, Abortable};
 use futures_timer::Delay;
 use once_cell::sync::Lazy;
 use rodio::{source::Buffered, Decoder, OutputStream, OutputStreamHandle, Sink, Source};
 
-use futures::{
-    executor::ThreadPool,
-    future::{AbortHandle, Abortable},
-};
-
-use futures::task::SpawnExt;
 use std::{
     fs::File,
     io::BufReader,
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, RwLock,
+        Arc,
     },
     time::Duration,
 };
 
-use crate::audio_player::{
-    playback_params::*, playback_position_controller::PlaybackPositionController, result::*,
+use tokio::{sync::RwLock, task::JoinHandle};
+
+use crate::{
+    audio_player::{
+        playback_params::*, playback_position_controller::PlaybackPositionController, result::*,
+    },
+    get_cur_playlist_async, PlaylistTrait, StorageUtil, TrackTrait, PARAMS,
 };
-use crate::{PlaylistTrait, StorageUtil, TrackTrait, PARAMS};
 
 pub struct AudioPlayer {
     source_path: Option<PathBuf>,
@@ -38,7 +38,6 @@ pub struct AudioPlayer {
     is_playing: Arc<AtomicBool>,
     playback_params: PlaybackParams,
     playback_position_controller: Arc<RwLock<PlaybackPositionController>>,
-    pool: ThreadPool,
 }
 
 pub static mut AUDIO_PLAYER: Lazy<Arc<RwLock<AudioPlayer>>> =
@@ -55,7 +54,6 @@ impl AudioPlayer {
             playback_position_controller: Arc::new(RwLock::new(
                 PlaybackPositionController::default(),
             )),
-            pool: ThreadPool::new().unwrap(),
             total_duration: Duration::default(),
         }
     }
@@ -69,12 +67,7 @@ impl AudioPlayer {
     ) {
         let (handle, reg) = AbortHandle::new_pair();
         let is_playing_clone = is_playing.clone();
-
-        let position_clone = playback_position_controller
-            .read()
-            .unwrap()
-            .position
-            .clone();
+        let position_clone = playback_position_controller.read().await.position.clone();
 
         let task = Abortable::new(
             async move {
@@ -82,43 +75,36 @@ impl AudioPlayer {
                     Delay::new(Duration::from_millis((50.0) as u64)).await;
 
                     if is_playing_clone.load(Ordering::SeqCst) {
-                        let cur_dur = *position_clone.read().unwrap()
+                        let cur_dur = *position_clone.read().await
                             + Duration::from_millis((50.0 * speed.load(Ordering::SeqCst)) as u64);
 
                         if cur_dur > max_duration {
-                            *position_clone.write().unwrap() = max_duration;
+                            *position_clone.write().await = max_duration;
                             is_playing_clone.store(false, Ordering::SeqCst);
                             break;
                         }
 
-                        *position_clone.write().unwrap() = cur_dur;
+                        *position_clone.write().await = cur_dur;
                     }
                 }
             },
             reg,
         );
 
-        playback_position_controller.write().unwrap().task = Some(handle);
+        playback_position_controller.write().await.task = Some(handle);
         task.await.unwrap_or_default()
     }
 
     #[inline]
-    fn get_buffered_source(&mut self) -> Result<Buffered<Decoder<BufReader<File>>>> {
+    async fn get_buffered_source(&mut self) -> Result<Buffered<Decoder<BufReader<File>>>> {
         if self.source_path.is_none() {
-            self.source_path = unsafe {
-                Some(
-                    PARAMS
-                        .read()
-                        .unwrap()
-                        .as_ref()
-                        .unwrap()
-                        .get_cur_playlist()
-                        .get_cur_track()
-                        .unwrap()
-                        .get_path()
-                        .clone(),
-                )
-            };
+            self.source_path = Some(unsafe {
+                get_cur_playlist_async!()
+                    .get_cur_track()
+                    .unwrap()
+                    .get_path()
+                    .clone()
+            });
         }
 
         Ok(Source::buffered(
@@ -135,26 +121,29 @@ impl AudioPlayer {
     }
 
     #[inline]
-    fn run_playback_preparation_tasks(
-        pool: ThreadPool,
+    async fn run_playback_preparation_tasks(
         is_playing: Arc<AtomicBool>,
         playback_position_controller: Arc<RwLock<PlaybackPositionController>>,
         speed: Arc<AtomicF32>,
         max_duration: Duration,
     ) {
-        pool.spawn_ok(AudioPlayer::run_playback_control_task(
-            is_playing,
-            playback_position_controller,
-            speed,
-            max_duration,
-        ));
+        unsafe {
+            PARAMS.read().await.as_ref().unwrap().tokio_runtime.spawn(
+                AudioPlayer::run_playback_control_task(
+                    is_playing,
+                    playback_position_controller,
+                    speed,
+                    max_duration,
+                ),
+            );
+        }
     }
 
     #[inline]
-    fn abort_playback_position_controller_tasks(&self) {
+    async fn abort_playback_position_controller_tasks(&self) {
         self.playback_position_controller
             .write()
-            .unwrap()
+            .await
             .task
             .as_ref()
             .map(|t| t.abort())
@@ -162,100 +151,129 @@ impl AudioPlayer {
     }
 
     #[inline]
-    fn play_with_result(&mut self, source: PathBuf, track_duration: Duration) -> Result<()> {
-        self.abort_playback_position_controller_tasks();
+    async fn play_with_result(
+        this: Arc<RwLock<AudioPlayer>>,
+        source: PathBuf,
+        track_duration: Duration,
+    ) -> Result<()> {
+        this.read()
+            .await
+            .abort_playback_position_controller_tasks()
+            .await;
 
-        self.source_path = Some(source);
-        self.total_duration = track_duration;
+        this.write().await.source_path = Some(source);
+        this.write().await.total_duration = track_duration;
 
-        *self
+        *this
+            .write()
+            .await
             .playback_position_controller
             .write()
-            .unwrap()
+            .await
             .position
             .write()
-            .unwrap() = Duration::default();
+            .await = Duration::default();
 
-        self.save_cur_playback_pos_async();
+        this.read().await.save_cur_playback_pos_async().await;
 
         let src = Source::buffered(Source::fade_in(
             Source::reverb(
-                self.get_buffered_source()?,
-                self.playback_params.get_reverb().get_duration(),
-                self.playback_params.get_reverb().get_amplitude(),
+                this.write().await.get_buffered_source().await?,
+                this.read()
+                    .await
+                    .playback_params
+                    .get_reverb()
+                    .get_duration(),
+                this.read()
+                    .await
+                    .playback_params
+                    .get_reverb()
+                    .get_amplitude(),
             ),
-            self.playback_params.get_fade_in(),
+            this.read().await.playback_params.get_fade_in(),
         ));
 
         let (stream, handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&handle).unwrap();
-        self.playback_data = Some((stream, handle, sink));
+        this.write().await.playback_data = Some((stream, handle, sink));
 
         {
-            let speed = self.playback_params.get_speed();
-            let volume = self.playback_params.get_volume();
-            let refer = &mut self.playback_data.as_mut().unwrap().2;
+            let speed = this.read().await.playback_params.get_speed();
+            let volume = this.read().await.playback_params.get_volume();
+            let mut refer = this.write().await;
+            let refer = &mut refer.playback_data.as_mut().unwrap().2;
             refer.append(src);
             refer.set_speed(speed);
             refer.set_volume(volume);
         }
 
-        self.is_playing.store(true, Ordering::SeqCst);
+        this.read().await.is_playing.store(true, Ordering::SeqCst);
 
         AudioPlayer::run_playback_preparation_tasks(
-            self.pool.clone(),
-            self.is_playing.clone(),
-            self.playback_position_controller.clone(),
-            self.get_speed_ref(),
-            self.total_duration,
-        );
+            this.read().await.is_playing.clone(),
+            this.read().await.playback_position_controller.clone(),
+            this.read().await.get_speed_ref(),
+            this.read().await.total_duration,
+        )
+        .await;
 
         Ok(())
     }
 
     #[inline]
-    pub async fn play(&mut self, source: PathBuf, track_duration: Duration) {
-        self.play_with_result(source, track_duration)
+    pub async fn play(source: PathBuf, track_duration: Duration) {
+        AudioPlayer::play_with_result(unsafe { AUDIO_PLAYER.clone() }, source, track_duration)
+            .await
             .unwrap_or_default()
     }
 
     #[inline]
-    pub fn save_cur_playback_pos_async(&self) {
-        let pos = self.get_cur_playback_pos().as_millis() as u64;
+    pub async fn save_cur_playback_pos_async(&self) -> JoinHandle<()> {
+        let pos = self.get_cur_playback_pos().await.as_millis() as u64;
 
-        self.pool
-            .spawn(async move { StorageUtil::store_current_playback_position(pos).unwrap_or_default() })
-            .unwrap_or_default()
+        unsafe {
+            PARAMS
+                .read()
+                .await
+                .as_ref()
+                .unwrap()
+                .tokio_runtime
+                .spawn(async move {
+                    StorageUtil::store_current_playback_position(pos).unwrap_or_default()
+                })
+        }
     }
 
     #[inline]
-    pub fn pause(&mut self) {
+    pub async fn pause(&mut self) {
         self.is_playing.store(false, Ordering::SeqCst);
 
-        if let Some(task) = &self.playback_position_controller.read().unwrap().task {
+        if let Some(task) = &self.playback_position_controller.read().await.task {
             task.abort()
         }
 
         self.playback_data.as_mut().unwrap().2.stop();
-        self.save_cur_playback_pos_async()
+        self.save_cur_playback_pos_async().await;
     }
 
     #[inline]
-    fn resume_with_result(&mut self, track_duration: Duration) -> Result<()> {
-        let cur_duration = self.get_cur_playback_pos();
-        self.seek_to_with_result(cur_duration, track_duration)
+    async fn resume_with_result(&mut self, track_duration: Duration) -> Result<()> {
+        let cur_duration = self.get_cur_playback_pos().await;
+        self.seek_to_with_result(cur_duration, track_duration).await
     }
 
     #[inline]
-    pub fn resume(&mut self, track_duration: Duration) {
-        self.resume_with_result(track_duration).unwrap_or_default()
+    pub async fn resume(&mut self, track_duration: Duration) {
+        self.resume_with_result(track_duration)
+            .await
+            .unwrap_or_default()
     }
 
     #[inline]
-    pub fn stop(&mut self) {
+    pub async fn stop(&mut self) {
         self.is_playing.store(false, Ordering::SeqCst);
 
-        if let Some(task) = &self.playback_position_controller.read().unwrap().task {
+        if let Some(task) = &self.playback_position_controller.read().await.task {
             task.abort()
         }
 
@@ -264,15 +282,19 @@ impl AudioPlayer {
             .map(|pd| pd.2.stop())
             .unwrap_or_default();
 
-        self.save_cur_playback_pos_async()
+        self.save_cur_playback_pos_async().await;
     }
 
     #[inline]
-    fn seek_to_with_result(&mut self, position: Duration, track_duration: Duration) -> Result<()> {
+    async fn seek_to_with_result(
+        &mut self,
+        position: Duration,
+        track_duration: Duration,
+    ) -> Result<()> {
         let src = Source::buffered(Source::skip_duration(
             Source::fade_in(
                 Source::reverb(
-                    self.get_buffered_source()?,
+                    self.get_buffered_source().await?,
                     self.playback_params.get_reverb().get_duration(),
                     self.playback_params.get_reverb().get_amplitude(),
                 ),
@@ -281,7 +303,7 @@ impl AudioPlayer {
             position,
         ));
 
-        self.stop();
+        self.stop().await;
 
         let (stream, handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&handle).unwrap();
@@ -297,32 +319,33 @@ impl AudioPlayer {
             refer.set_volume(volume);
         }
 
-        self.abort_playback_position_controller_tasks();
+        self.abort_playback_position_controller_tasks().await;
         self.is_playing.store(true, Ordering::SeqCst);
 
         *self
             .playback_position_controller
             .write()
-            .unwrap()
+            .await
             .position
             .write()
-            .unwrap() = position;
+            .await = position;
 
         AudioPlayer::run_playback_preparation_tasks(
-            self.pool.clone(),
             self.is_playing.clone(),
             self.playback_position_controller.clone(),
             self.get_speed_ref(),
             self.total_duration,
-        );
+        )
+        .await;
 
-        self.save_cur_playback_pos_async();
+        self.save_cur_playback_pos_async().await;
         Ok(())
     }
 
     #[inline]
-    pub fn seek_to(&mut self, position: Duration, track_duration: Duration) {
+    pub async fn seek_to(&mut self, position: Duration, track_duration: Duration) {
         self.seek_to_with_result(position, track_duration)
+            .await
             .unwrap_or_default()
     }
 
@@ -379,19 +402,19 @@ impl AudioPlayer {
     #[inline]
     pub async fn set_reverb(&mut self, reverb: ReverbParams) -> Result<()> {
         self.playback_params.set_reverb(reverb);
-        self.abort_playback_position_controller_tasks();
+        self.abort_playback_position_controller_tasks().await;
 
         let pos = *self
             .playback_position_controller
             .read()
-            .unwrap()
+            .await
             .position
             .read()
-            .unwrap();
+            .await;
 
         let src = Source::buffered(Source::skip_duration(
             Source::reverb(
-                self.get_buffered_source()?,
+                self.get_buffered_source().await?,
                 reverb.get_duration(),
                 reverb.get_amplitude(),
             ),
@@ -402,12 +425,12 @@ impl AudioPlayer {
         self.is_playing.store(true, Ordering::SeqCst);
 
         AudioPlayer::run_playback_preparation_tasks(
-            self.pool.clone(),
             self.is_playing.clone(),
             self.playback_position_controller.clone(),
             self.get_speed_ref(),
             self.total_duration,
-        );
+        )
+        .await;
 
         Ok(())
     }
@@ -415,18 +438,18 @@ impl AudioPlayer {
     #[inline]
     pub async fn set_fade_in(&mut self, fade_in: Duration) -> Result<()> {
         self.playback_params.set_fade_in(fade_in);
-        self.abort_playback_position_controller_tasks();
+        self.abort_playback_position_controller_tasks().await;
 
         let pos = *self
             .playback_position_controller
             .read()
-            .unwrap()
+            .await
             .position
             .read()
-            .unwrap();
+            .await;
 
         let src = Source::buffered(Source::skip_duration(
-            Source::fade_in(self.get_buffered_source()?, fade_in),
+            Source::fade_in(self.get_buffered_source().await?, fade_in),
             pos,
         ));
 
@@ -434,12 +457,12 @@ impl AudioPlayer {
         self.is_playing.store(true, Ordering::SeqCst);
 
         AudioPlayer::run_playback_preparation_tasks(
-            self.pool.clone(),
             self.is_playing.clone(),
             self.playback_position_controller.clone(),
             self.get_speed_ref(),
             self.total_duration,
-        );
+        )
+        .await;
 
         Ok(())
     }
@@ -460,14 +483,14 @@ impl AudioPlayer {
     }
 
     #[inline]
-    pub fn get_cur_playback_pos(&self) -> Duration {
+    pub async fn get_cur_playback_pos(&self) -> Duration {
         *self
             .playback_position_controller
             .read()
-            .unwrap()
+            .await
             .position
             .read()
-            .unwrap()
+            .await
     }
 
     #[inline]

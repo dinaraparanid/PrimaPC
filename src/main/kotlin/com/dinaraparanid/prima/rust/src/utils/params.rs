@@ -1,34 +1,26 @@
 extern crate once_cell;
-
-use once_cell::sync::Lazy;
+extern crate tokio;
 
 use crate::{
     entities::{playlists::default_playlist::DefaultPlaylist, tracks::default_track::DefaultTrack},
     utils::{storage_util::StorageUtil, track_order::TrackOrder},
 };
 
-use std::{
-    cell::RefCell,
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
+use once_cell::sync::Lazy;
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::{RwLockReadGuard, RwLockWriteGuard};
+use tokio::{runtime::Runtime, sync::RwLock};
 
 #[derive(Debug)]
 pub struct Params {
+    pub tokio_runtime: Arc<Runtime>,
     pub music_search_path: PathBuf,
     pub track_order: TrackOrder,
-    cur_playlist: RefCell<*mut DefaultPlaylist<DefaultTrack>>,
+    cur_playlist: Arc<RwLock<Option<DefaultPlaylist<DefaultTrack>>>>,
 }
 
 pub static mut PARAMS: Lazy<Arc<RwLock<Option<Params>>>> =
     Lazy::new(|| Arc::new(RwLock::new(Params::new())));
-
-impl Drop for Params {
-    #[inline]
-    fn drop(&mut self) {
-        unsafe { std::ptr::drop_in_place(*self.cur_playlist.borrow_mut()) }
-    }
-}
 
 impl Params {
     #[inline]
@@ -36,33 +28,39 @@ impl Params {
         Some(Self {
             music_search_path: StorageUtil::load_music_search_path()?,
             track_order: StorageUtil::load_track_order(),
-            cur_playlist: RefCell::new(std::ptr::null_mut()),
+            cur_playlist: Arc::new(RwLock::new(None)),
+            tokio_runtime: Arc::new(
+                tokio::runtime::Builder::new_multi_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap(),
+            ),
         })
     }
 
     #[inline]
-    fn init_cur_playlist(&self) {
-        if self.cur_playlist.borrow().is_null() {
-            let playlist = Box::new(StorageUtil::load_current_playlist());
-            let playlist = Box::leak(playlist);
-            self.cur_playlist.replace(playlist);
+    async fn init_cur_playlist_if_needed(&self) {
+        if self.cur_playlist.read().await.is_none() {
+            self.cur_playlist
+                .write()
+                .await
+                .replace(StorageUtil::load_current_playlist().await);
         }
     }
 
     #[inline]
-    pub fn get_cur_playlist(&self) -> &DefaultPlaylist<DefaultTrack> {
-        self.init_cur_playlist();
-
-        unsafe {
-            (*self.cur_playlist.borrow() as *const DefaultPlaylist<DefaultTrack>)
-                .as_ref()
-                .unwrap_unchecked()
-        }
+    pub async fn get_cur_playlist(
+        &self,
+    ) -> RwLockReadGuard<'_, Option<DefaultPlaylist<DefaultTrack>>> {
+        self.init_cur_playlist_if_needed().await;
+        self.cur_playlist.read().await
     }
 
     #[inline]
-    pub fn get_cur_playlist_mut(&self) -> &mut DefaultPlaylist<DefaultTrack> {
-        self.init_cur_playlist();
-        unsafe { self.cur_playlist.borrow_mut().as_mut().unwrap_unchecked() }
+    pub async fn get_cur_playlist_mut(
+        &self,
+    ) -> RwLockWriteGuard<'_, Option<DefaultPlaylist<DefaultTrack>>> {
+        self.init_cur_playlist_if_needed().await;
+        self.cur_playlist.write().await
     }
 }

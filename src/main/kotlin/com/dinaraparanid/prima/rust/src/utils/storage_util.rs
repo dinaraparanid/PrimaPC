@@ -149,7 +149,7 @@ impl StorageUtil {
     }
 
     #[inline]
-    pub fn load_current_playlist() -> DefaultPlaylist<DefaultTrack> {
+    pub async fn load_current_playlist() -> DefaultPlaylist<DefaultTrack> {
         let all_data = match Self::read_all_data_from_file() {
             Ok(x) => x,
             Err(_) => {
@@ -162,9 +162,9 @@ impl StorageUtil {
 
             Some(y) => match y.as_hash() {
                 None => Self::set_default_current_playlist().unwrap_or(DefaultPlaylist::default()),
-                Some(playlist) => {
-                    DefaultPlaylist::from_yaml(playlist).unwrap_or(DefaultPlaylist::default())
-                }
+                Some(playlist) => DefaultPlaylist::from_yaml(playlist)
+                    .await
+                    .unwrap_or(DefaultPlaylist::default()),
             },
         }
     }

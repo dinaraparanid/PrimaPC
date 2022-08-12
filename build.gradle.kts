@@ -36,7 +36,7 @@ tasks.withType<KotlinCompile> {
 
 compose.desktop {
     application {
-        mainClass = "com.dinaraparanid.prima/Main"
+        mainClass = "com.dinaraparanid.prima.Main"
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "PrimaPC"

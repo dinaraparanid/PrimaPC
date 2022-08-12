@@ -221,6 +221,8 @@ suspend fun startPlaybackControlTasks(
             playbackPositionState,
         )
 
+        println("Finish")
+
         if (RustLibs.getPlaybackPosition() == currentTrackState.value?.duration)
             onPlaybackCompletition(
                 currentTrackState,

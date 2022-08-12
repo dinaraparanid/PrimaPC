@@ -1,12 +1,10 @@
 extern crate futures;
+extern crate tokio;
 
 use crate::StorageUtil;
 use futures::future::AbortHandle;
-
-use std::{
-    sync::{Arc, RwLock},
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
+use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct PlaybackPositionController {

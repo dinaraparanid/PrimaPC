@@ -1,9 +1,11 @@
 extern crate jni;
 extern crate once_cell;
+extern crate tokio;
 
 use jni::JNIEnv;
 use once_cell::sync::Lazy;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 pub struct JVM {
     pub jni_env: Arc<Option<JNIEnv<'static>>>,

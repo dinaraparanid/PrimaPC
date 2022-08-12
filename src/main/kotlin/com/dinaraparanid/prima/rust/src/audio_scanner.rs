@@ -1,6 +1,7 @@
 extern crate async_recursion;
-extern crate futures;
+extern crate jni;
 extern crate once_cell;
+extern crate tokio;
 
 use crate::{
     entities::tracks::default_track::DefaultTrack,
@@ -11,62 +12,42 @@ use crate::{
     TrackTrait, JVM,
 };
 
-use std::{
-    fs,
-    path::Path,
-    sync::{Arc, Mutex, RwLock},
-};
-
 use async_recursion::async_recursion;
-use futures::{executor::ThreadPool, task::SpawnExt};
-use once_cell::sync::Lazy;
+use jni::JavaVM;
+use std::{fs, path::Path, sync::Arc};
+use tokio::sync::Mutex;
 
 #[derive(Debug)]
-pub struct AudioScanner {
-    pool: ThreadPool,
-}
-
-static mut AUDIO_SCANNER: Lazy<Arc<RwLock<AudioScanner>>> =
-    Lazy::new(|| Arc::new(RwLock::new(AudioScanner::new())));
+pub struct AudioScanner;
 
 impl AudioScanner {
     #[inline]
-    pub fn new() -> Self {
-        Self {
-            pool: ThreadPool::new().unwrap(),
-        }
-    }
-
-    #[inline]
     pub async fn get_all_tracks() -> Arc<Mutex<Vec<DefaultTrack>>> {
         let tracks = Arc::new(Mutex::new(Vec::new()));
-        let pool = unsafe { AUDIO_SCANNER.read().unwrap_unchecked().pool.clone() };
 
         unsafe {
             AudioScanner::search_all_tracks(
                 PARAMS
                     .read()
-                    .unwrap_unchecked()
+                    .await
                     .as_ref()
                     .unwrap_unchecked()
                     .music_search_path
                     .as_path(),
                 tracks.clone(),
-                pool,
+                {
+                    let jvm = JVM.read();
+                    let jni_env = jvm.await.jni_env.clone();
+                    Arc::new(jni_env.unwrap().get_java_vm().unwrap_unchecked())
+                },
             )
             .await
             .unwrap_unchecked();
         }
 
         unsafe {
-            let mut tracks = tracks.lock().unwrap_unchecked();
-
-            let track_order = PARAMS
-                .read()
-                .unwrap_unchecked()
-                .as_ref()
-                .unwrap_unchecked()
-                .track_order;
+            let mut tracks = tracks.lock().await;
+            let track_order = PARAMS.read().await.as_ref().unwrap_unchecked().track_order;
 
             tracks.sort_by(|f, s| match track_order.comparator {
                 Comparator::Title => match track_order.order {
@@ -147,9 +128,7 @@ impl AudioScanner {
     }
 
     #[inline]
-    pub async fn scan_file(file: &Path) -> Option<DefaultTrack> {
-        let jni_env = unsafe { &JVM.read().unwrap_unchecked().jni_env }.clone();
-        let jvm = unsafe { jni_env.unwrap().get_java_vm().unwrap_unchecked() };
+    pub async fn scan_file(file: &Path, jvm: Arc<JavaVM>) -> Option<DefaultTrack> {
         let jni_env = unsafe { jvm.attach_current_thread_permanently().unwrap_unchecked() };
         DefaultTrack::from_path(&jni_env, file.to_string_lossy().to_string())
     }
@@ -158,7 +137,7 @@ impl AudioScanner {
     async fn search_all_tracks(
         dir: &Path,
         tracks: Arc<Mutex<Vec<DefaultTrack>>>,
-        pool: ThreadPool,
+        jvm: Arc<JavaVM>,
     ) -> std::io::Result<()> {
         let dir = fs::read_dir(dir)?;
         let mut tasks = Vec::with_capacity(1000);
@@ -166,28 +145,33 @@ impl AudioScanner {
         for entry in dir {
             let path = entry?.path();
             let tracks_copy = tracks.clone();
-            let pool_ref_1 = pool.clone();
-            let pool_ref_2 = pool.clone();
+            let jvm = jvm.clone();
 
-            tasks.push(
-                pool_ref_1
-                    .spawn_with_handle(async move {
+            tasks.push(unsafe {
+                let params = PARAMS.read().await;
+
+                params
+                    .as_ref()
+                    .unwrap_unchecked()
+                    .tokio_runtime
+                    .spawn(async move {
                         if path.is_dir() {
                             AudioScanner::search_all_tracks(
                                 path.as_path(),
                                 tracks_copy.clone(),
-                                pool_ref_2.clone(),
+                                jvm.clone(),
                             )
                             .await
                             .unwrap();
                         } else {
-                            if let Some(track) = AudioScanner::scan_file(path.as_path()).await {
-                                tracks_copy.lock().unwrap().push(track)
+                            if let Some(track) =
+                                AudioScanner::scan_file(path.as_path(), jvm.clone()).await
+                            {
+                                tracks_copy.lock().await.push(track)
                             }
                         }
                     })
-                    .unwrap(),
-            );
+            });
         }
 
         futures::future::join_all(tasks).await;

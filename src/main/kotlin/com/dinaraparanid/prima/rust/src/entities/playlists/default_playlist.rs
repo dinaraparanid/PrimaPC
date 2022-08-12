@@ -14,10 +14,10 @@ impl_playlist_traits!(DefaultPlaylist);
 
 impl DefaultPlaylist<crate::entities::tracks::default_track::DefaultTrack> {
     #[inline]
-    pub fn from_yaml(playlist: &yaml_rust::yaml::Hash) -> Option<Self> {
+    pub async fn from_yaml(playlist: &yaml_rust::yaml::Hash) -> Option<Self> {
         use yaml_rust::Yaml;
 
-        let jni_env = unsafe { &crate::jvm::JVM.read().unwrap().jni_env }.clone();
+        let jni_env = unsafe { &crate::jvm::JVM.read().await.jni_env }.clone();
         let jvm = jni_env.unwrap().get_java_vm().unwrap();
         let jni_env = jvm.attach_current_thread_permanently().unwrap();
 

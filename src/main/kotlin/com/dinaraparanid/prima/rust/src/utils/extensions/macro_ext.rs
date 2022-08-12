@@ -261,3 +261,47 @@ macro_rules! impl_dao {
         }
     };
 }
+
+#[macro_export]
+macro_rules! get_cur_playlist_async {
+    () => {
+        PARAMS
+            .read()
+            .await
+            .as_ref()
+            .unwrap()
+            .get_cur_playlist()
+            .await
+            .as_ref()
+            .unwrap()
+    };
+}
+
+#[macro_export]
+macro_rules! get_cur_playlist_mut_async {
+    () => {
+        PARAMS
+            .write()
+            .await
+            .as_mut()
+            .unwrap()
+            .get_cur_playlist_mut()
+            .await
+            .as_mut()
+            .unwrap()
+    };
+}
+
+#[macro_export]
+macro_rules! simplify_get_cur_playlist {
+    ($playlist:expr) => {
+        $playlist.await.as_ref().unwrap()
+    };
+}
+
+#[macro_export]
+macro_rules! simplify_get_cur_playlist_mut {
+    ($playlist:expr) => {
+        $playlist.await.as_ref().unwrap()
+    };
+}

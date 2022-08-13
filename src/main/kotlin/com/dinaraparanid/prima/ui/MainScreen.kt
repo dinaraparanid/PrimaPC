@@ -215,13 +215,12 @@ suspend fun startPlaybackControlTasks(
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>
 ): Unit = coroutineScope {
-    playbackControlTasks = launch(Dispatchers.Default) {
+    // NonCancelable fixes cancelable delay
+    playbackControlTasks = launch(NonCancellable) {
         runCalculationOfSliderPos(
             isPlaybackTrackDraggingState,
             playbackPositionState,
         )
-
-        println("Finish")
 
         if (RustLibs.getPlaybackPosition() == currentTrackState.value?.duration)
             onPlaybackCompletition(

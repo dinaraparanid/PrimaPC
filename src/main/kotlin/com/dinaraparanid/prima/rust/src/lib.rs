@@ -231,18 +231,16 @@ async fn has_cur_track() -> bool {
 }
 
 #[inline]
-fn set_cur_playlist(playlist: DefaultPlaylist<DefaultTrack>) {
-    block_on(async {
-        unsafe {
-            *PARAMS
-                .write()
-                .await
-                .as_mut()
-                .unwrap()
-                .get_cur_playlist_mut()
-                .await = Some(playlist);
-        }
-    })
+async fn set_cur_playlist(playlist: DefaultPlaylist<DefaultTrack>) {
+    unsafe {
+        *PARAMS
+            .write()
+            .await
+            .as_mut()
+            .unwrap()
+            .get_cur_playlist_mut()
+            .await = Some(playlist);
+    }
 }
 
 #[inline]
@@ -269,10 +267,10 @@ async unsafe fn play_pause_cur_track(playlist: Option<DefaultPlaylist<DefaultTra
         }
 
         if is_prev_track_equals_cur_track(cur_track.unwrap()).await {
-            set_cur_playlist(playlist.unwrap());
+            set_cur_playlist(playlist.unwrap()).await;
             AUDIO_PLAYER.write().await.pause().await
         } else {
-            set_cur_playlist(playlist.unwrap());
+            set_cur_playlist(playlist.unwrap()).await;
             let (path, track_duration) = get_path_and_duration_of_cur_track().await;
             AudioPlayer::play(path, track_duration).await
         }
@@ -280,7 +278,7 @@ async unsafe fn play_pause_cur_track(playlist: Option<DefaultPlaylist<DefaultTra
     }
 
     if get_cur_playlist_async!().get_cur_track().is_none() {
-        set_cur_playlist(playlist.unwrap());
+        set_cur_playlist(playlist.unwrap()).await;
         let (path, track_duration) = get_path_and_duration_of_cur_track().await;
         AudioPlayer::play(path, track_duration).await;
         return;
@@ -288,16 +286,16 @@ async unsafe fn play_pause_cur_track(playlist: Option<DefaultPlaylist<DefaultTra
 
     if playlist.is_none() {
         let (_, track_duration) = get_path_and_duration_of_cur_track().await;
-        AUDIO_PLAYER.write().await.resume(track_duration).await;
+        AudioPlayer::resume(AUDIO_PLAYER.clone(), track_duration).await;
         return;
     }
 
     if is_prev_track_equals_cur_track(cur_track.unwrap()).await {
-        set_cur_playlist(playlist.unwrap());
+        set_cur_playlist(playlist.unwrap()).await;
         let (_, track_duration) = get_path_and_duration_of_cur_track().await;
-        AUDIO_PLAYER.write().await.resume(track_duration).await
+        AudioPlayer::resume(AUDIO_PLAYER.clone(), track_duration).await;
     } else {
-        set_cur_playlist(playlist.unwrap());
+        set_cur_playlist(playlist.unwrap()).await;
         let (path, track_duration) = get_path_and_duration_of_cur_track().await;
         AudioPlayer::play(path, track_duration).await
     }
@@ -425,11 +423,12 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_seekTo(
 
         unsafe {
             if has_cur_track().await {
-                AUDIO_PLAYER
-                    .write()
-                    .await
-                    .seek_to(Duration::from_millis(millis as u64), duration)
-                    .await
+                AudioPlayer::seek_to(
+                    AUDIO_PLAYER.clone(),
+                    Duration::from_millis(millis as u64),
+                    duration,
+                )
+                .await
             }
         }
     })
@@ -466,7 +465,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setNextLooping
 ) -> jint {
     block_on(async {
         unsafe {
-            AUDIO_PLAYER.write().await.set_next_looping_state();
+            AudioPlayer::set_next_looping_state(AUDIO_PLAYER.clone()).await;
             let state = AUDIO_PLAYER.read().await.get_looping_state();
             StorageUtil::store_looping_state(state).unwrap_or_default();
             state.into()
@@ -482,7 +481,9 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setVolume(
     volume: jfloat,
 ) {
     StorageUtil::store_volume(volume).unwrap_or_default();
-    block_on(async { unsafe { AUDIO_PLAYER.write().await.set_volume(volume as f32) } })
+    block_on(async {
+        unsafe { AudioPlayer::set_volume(AUDIO_PLAYER.clone(), volume as f32).await }
+    })
 }
 
 #[no_mangle]
@@ -493,7 +494,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setSpeed(
     speed: jfloat,
 ) {
     StorageUtil::store_speed(speed).unwrap_or_default();
-    block_on(async { unsafe { AUDIO_PLAYER.write().await.set_speed(speed as f32) } })
+    block_on(async { unsafe { AudioPlayer::set_speed(AUDIO_PLAYER.clone(), speed as f32).await } })
 }
 
 #[no_mangle]

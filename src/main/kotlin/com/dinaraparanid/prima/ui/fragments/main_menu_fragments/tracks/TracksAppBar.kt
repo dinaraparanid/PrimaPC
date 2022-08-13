@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun TracksAppBar(allTracksState: SnapshotStateList<Track>, filteredAllTracksState: SnapshotStateList<Track>) {
     val isSearchingState = remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     when {
         isSearchingState.value -> SearchAppBar(

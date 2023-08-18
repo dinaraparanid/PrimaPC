@@ -1,4 +1,3 @@
-import org.jetbrains.compose.compose
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -24,10 +23,18 @@ buildscript {
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation(group = "net.jthink", name = "jaudiotagger", version = "3.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+
     implementation("com.arkivanov.decompose:decompose:2.0.1")
     implementation("com.arkivanov.decompose:extensions-compose-jetbrains:2.0.1")
+
+    implementation("io.insert-koin:koin-core:3.4.3")
+    implementation("io.insert-koin:koin-core-coroutines:3.4.3")
+    implementation("io.insert-koin:koin-compose:1.0.4")
+
+    implementation("com.charleskorn.kaml:kaml:0.55.0")
+
+    implementation(group = "net.jthink", name = "jaudiotagger", version = "3.0.1")
 }
 
 tasks.withType<KotlinCompile> {

@@ -1,5 +1,10 @@
-package com.dinaraparanid.prima
+package com.paranid5.prima
 
-import com.dinaraparanid.prima.ui.App
+import com.paranid5.prima.di.appModule
+import com.paranid5.prima.presentation.App
+import org.koin.core.context.startKoin
 
-fun main() = App()
+fun main() {
+    startKoin { modules(appModule) }
+    App()
+}

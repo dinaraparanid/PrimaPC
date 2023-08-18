@@ -1,7 +1,7 @@
 package com.paranid5.prima.rust;
 
-import com.dinaraparanid.prima.entities.Track;
-import com.dinaraparanid.prima.utils.localization.Localization;
+import com.paranid5.prima.data.Track;
+import com.paranid5.prima.domain.localization.Localization;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.tag.FieldKey;
 import org.jetbrains.annotations.NotNull;

@@ -4,12 +4,8 @@ extern crate jni;
 #[macro_use]
 extern crate diesel;
 
-pub mod audio_player;
-pub mod audio_scanner;
-pub mod databases;
-pub mod entities;
-pub mod utils;
-
+pub mod data;
+pub mod domain;
 #[cfg(test)]
 mod tests;
 
@@ -19,40 +15,41 @@ use futures::executor::block_on;
 use std::{cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc, sync::Arc, time::Duration};
 
 use crate::{
-    audio_player::{audio_player::*, playback_params::PlaybackParams},
-    audio_scanner::AudioScanner,
-    databases::{
-        db_entity::DBEntity,
-        entity_dao::EntityDao,
-        favourites::{
-            daos::{
-                favourite_artist_dao::FavouriteArtistDao,
-                favourite_playlist_dao::{FavouritePlaylistDBEntity, FavouritePlaylistDao},
-                favourite_track_dao::FavouriteTrackDao,
+    data::{
+        databases::{
+            db_entity::DBEntity,
+            entity_dao::EntityDao,
+            favourites::{
+                daos::{
+                    favourite_artist_dao::FavouriteArtistDao,
+                    favourite_playlist_dao::{FavouritePlaylistDBEntity, FavouritePlaylistDao},
+                    favourite_track_dao::FavouriteTrackDao,
+                },
+                db::establish_connection,
             },
-            db::establish_connection,
+        },
+        entities::{
+            artists::favourite_artist::FavouriteArtist,
+            favourable::Favourable,
+            playlists::{
+                default_playlist::DefaultPlaylist, playlist_trait::PlaylistTrait,
+                playlist_type::PlaylistType,
+            },
+            tracks::{
+                default_track::DefaultTrack, favourite_track::FavouriteTrack,
+                track_trait::TrackTrait,
+            },
+        },
+        utils::{
+            extensions::{
+                jlist_ext::JListExt, playlist_ext::PlaylistExt, string_ext::StringExt,
+                track_ext::TrackExt, vec_ext::ExactSizeIteratorExt,
+            },
+            track_order::{Comparator, Ord, TrackOrder},
+            types::{TokioRuntime, AJVM},
         },
     },
-    entities::{
-        artists::favourite_artist::FavouriteArtist,
-        favourable::Favourable,
-        playlists::{
-            default_playlist::DefaultPlaylist, playlist_trait::PlaylistTrait,
-            playlist_type::PlaylistType,
-        },
-        tracks::{
-            default_track::DefaultTrack, favourite_track::FavouriteTrack, track_trait::TrackTrait,
-        },
-    },
-    utils::{
-        extensions::{
-            jlist_ext::JListExt, playlist_ext::PlaylistExt, string_ext::StringExt,
-            track_ext::TrackExt, vec_ext::ExactSizeIteratorExt,
-        },
-        storage_util::StorageUtil,
-        track_order::{Comparator, Ord, TrackOrder},
-        types::{TokioRuntime, AJVM},
-    },
+    domain::{audio_scanner::AudioScanner, storage_util::StorageUtil},
 };
 
 use jni::{
@@ -61,6 +58,7 @@ use jni::{
     JNIEnv,
 };
 
+use domain::audio_player::{audio_player::*, playback_params::PlaybackParams};
 use once_cell::sync::Lazy;
 use tokio::sync::RwLock;
 

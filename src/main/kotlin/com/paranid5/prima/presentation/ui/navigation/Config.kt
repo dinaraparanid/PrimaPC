@@ -6,99 +6,99 @@ import com.arkivanov.essenty.parcelable.Parcelize
 sealed interface Config : Parcelable {
     sealed interface MainMenuConfig : Config {
         @Parcelize
-        object Tracks : MainMenuConfig
+        data object Tracks : MainMenuConfig
 
         @Parcelize
-        object TrackCollections : MainMenuConfig
+        data object TrackCollections : MainMenuConfig
 
         @Parcelize
-        object Artists : MainMenuConfig
+        data object Artists : MainMenuConfig
 
         @Parcelize
-        object Favourites : MainMenuConfig
+        data object Favourites : MainMenuConfig
 
         @Parcelize
-        object MP3Converter : MainMenuConfig
+        data object MP3Converter : MainMenuConfig
 
         @Parcelize
-        object GTM : MainMenuConfig
+        data object GTM : MainMenuConfig
 
         @Parcelize
-        object Statistics : MainMenuConfig
+        data object Statistics : MainMenuConfig
 
         @Parcelize
-        object Settings : MainMenuConfig
+        data object Settings : MainMenuConfig
 
         @Parcelize
-        object AboutApp : MainMenuConfig
+        data object AboutApp : MainMenuConfig
     }
 
     sealed interface TrackCollectionsConfig : Config {
         @Parcelize
-        object Albums : TrackCollectionsConfig
+        data object Albums : TrackCollectionsConfig
 
         @Parcelize
-        object CustomPlaylists : TrackCollectionsConfig
+        data object CustomPlaylists : TrackCollectionsConfig
     }
 
     sealed interface FavouritesConfig : Config {
         @Parcelize
-        object Tracks : FavouritesConfig
+        data object Tracks : FavouritesConfig
 
         @Parcelize
-        object Artists : FavouritesConfig
+        data object Artists : FavouritesConfig
 
         @Parcelize
-        object TrackCollections : FavouritesConfig
+        data object TrackCollections : FavouritesConfig
     }
 
     sealed interface GTMConfig : Config {
         @Parcelize
-        object AboutGame : GTMConfig
+        data object AboutGame : GTMConfig
 
         @Parcelize
-        object Game : GTMConfig
+        data object Game : GTMConfig
     }
 
     sealed interface StatisticsConfig : Config {
         @Parcelize
-        object AllTime : StatisticsConfig
+        data object AllTime : StatisticsConfig
 
         @Parcelize
-        object Year : StatisticsConfig
+        data object Year : StatisticsConfig
 
         @Parcelize
-        object Weak : StatisticsConfig
+        data object Weak : StatisticsConfig
 
         @Parcelize
-        object Day : StatisticsConfig
+        data object Day : StatisticsConfig
     }
 
     sealed interface SettingsConfig : Config {
         @Parcelize
-        object Fonts : SettingsConfig
+        data object Fonts : SettingsConfig
 
         @Parcelize
-        object Themes : SettingsConfig
+        data object Themes : SettingsConfig
 
         @Parcelize
-        object FilesLocation : SettingsConfig
+        data object FilesLocation : SettingsConfig
 
         @Parcelize
-        object HiddenTracks : SettingsConfig
+        data object HiddenTracks : SettingsConfig
     }
 
     sealed interface PlaybarConfig : Config {
         @Parcelize
-        object CurrentPlaylist : SettingsConfig
+        data object CurrentPlaylist : SettingsConfig
 
         @Parcelize
-        object TrimTrack : SettingsConfig
+        data object TrimTrack : SettingsConfig
 
         @Parcelize
-        object Equalizer : SettingsConfig
+        data object Equalizer : SettingsConfig
     }
 
     @Parcelize
-    object ArtistTracks : Config
+    data object ArtistTracks : Config
 }

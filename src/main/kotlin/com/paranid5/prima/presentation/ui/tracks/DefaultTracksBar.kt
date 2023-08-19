@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.paranid5.prima.data.Track
 import com.paranid5.prima.rust.RustLibs
-import com.paranid5.prima.presentation.fragments.main_menu_fragments.tracks.scanTracks
+import com.paranid5.prima.presentation.screens.main_menu_fragments.tracks.scanTracks
 import com.paranid5.prima.domain.localization.LocalizedString
 import kotlinx.coroutines.launch
 
@@ -73,7 +73,7 @@ fun DefaultTracksBar(
 
                     Row(modifier = Modifier.fillMaxHeight().padding(end = 20.dp)) {
                         val trackOdrState = remember {
-                            mutableStateListOf(*RustLibs.getTrackOrder().toTypedArray())
+                            mutableStateListOf(*RustLibs.getTrackOrderBlocking().toTypedArray())
                         }
 
                         val isPopupMenuExpandedState = remember { mutableStateOf(false) }

@@ -9,7 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 
 class StorageHandler : CoroutineScope by CoroutineScope(Dispatchers.IO) {
-    val languageState = MutableStateFlow(Language.English)
+    val languageState = MutableStateFlow<Language>(Language.English)
 
     val themeState = MutableStateFlow<Theme>(Theme.PurpleNight())
 

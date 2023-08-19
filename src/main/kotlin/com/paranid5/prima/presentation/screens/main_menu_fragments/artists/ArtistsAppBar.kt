@@ -1,4 +1,4 @@
-package com.paranid5.prima.presentation.ui.tracks
+package com.paranid5.prima.presentation.screens.main_menu_fragments.artists
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,47 +10,38 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.paranid5.prima.data.Track
-import com.paranid5.prima.data.TrackSearchOrder
+import com.paranid5.prima.data.Artist
 import com.paranid5.prima.domain.StorageHandler
 import com.paranid5.prima.presentation.ui.SearchAppBar
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @Composable
-fun DefaultTracksAppBar(
-    mainLabel: String,
-    tracksState: MutableState<List<Track>>,
-    filteredTracksState: MutableState<List<Track>>,
-    modifier: Modifier = Modifier,
-    storageHandler: StorageHandler = koinInject()
+fun ArtistsAppBar(
+    allArtistsState: MutableState<List<Artist>>,
+    filteredAllArtistsState: MutableState<List<Artist>>,
+    modifier: Modifier = Modifier
 ) {
     val isSearchingState = remember { mutableStateOf(false) }
-    val trackSearchOrder by storageHandler.trackSearchOrderState.collectAsState()
 
     when {
         isSearchingState.value -> SearchAppBar(
             isSearchingState = isSearchingState,
-            allEntitiesState = tracksState,
-            filteredEntitiesState = filteredTracksState,
-            modifier = modifier,
-            onTextChanged = { q ->
-                val query = q.lowercase()
+            allEntitiesState = allArtistsState,
+            filteredEntitiesState = filteredAllArtistsState,
+            modifier = modifier
+        ) { q ->
+            val query = q.lowercase()
 
-                fun contains(order: TrackSearchOrder, trackTag: String?) =
-                    order in trackSearchOrder && trackTag?.lowercase()?.contains(query) == true
-
-                filteredTracksState.value = tracksState.value.filter { track ->
-                    if (contains(TrackSearchOrder.TITLE, track.title)) return@filter true
-                    if (contains(TrackSearchOrder.ARTIST, track.artist)) return@filter true
-                    contains(TrackSearchOrder.ALBUM, track.album)
-                }
-            },
-        )
+            filteredAllArtistsState.value = allArtistsState.value.filter { artist ->
+                query in artist.name.lowercase()
+            }
+        }
 
         else -> DefaultAppBar(
-            isSearchingState = isSearchingState,
-            mainLabel = mainLabel,
-            modifier = modifier
+            isSearchingState,
+            allArtistsState,
+            filteredAllArtistsState
         )
     }
 }
@@ -58,12 +49,12 @@ fun DefaultTracksAppBar(
 @Composable
 private fun DefaultAppBar(
     isSearchingState: MutableState<Boolean>,
-    mainLabel: String,
+    artistsState: MutableState<List<Artist>>,
+    filteredArtistsState: MutableState<List<Artist>>,
     modifier: Modifier = Modifier,
     storageHandler: StorageHandler = koinInject()
 ) {
     val primaryColor by storageHandler.primaryColorState.collectAsState()
-    val isPopupMenuExpandedState = remember { mutableStateOf(false) }
 
     TopAppBar(
         modifier = modifier.fillMaxWidth().height(60.dp),
@@ -75,13 +66,10 @@ private fun DefaultAppBar(
             color = primaryColor,
             elevation = 10.dp
         ) {
-            Row(modifier = Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxSize()) {
                 Spacer(Modifier.width(40.dp).fillMaxHeight())
 
-                Label(
-                    mainLabel = mainLabel,
-                    modifier = Modifier.align(Alignment.CenterVertically)
-                )
+                Label(Modifier.align(Alignment.CenterVertically))
 
                 Spacer(Modifier.weight(1F))
 
@@ -91,12 +79,11 @@ private fun DefaultAppBar(
                         modifier = Modifier.align(Alignment.CenterVertically)
                     )
 
-                    ParamsButton(
-                        isPopupMenuExpandedState = isPopupMenuExpandedState,
+                    ScannerButton(
+                        artistsState = artistsState,
+                        filteredArtistsState = filteredArtistsState,
                         modifier = Modifier.align(Alignment.CenterVertically)
                     )
-
-                    SearchByParamsMenu(isPopupMenuExpandedState)
                 }
             }
         }
@@ -105,14 +92,14 @@ private fun DefaultAppBar(
 
 @Composable
 private fun Label(
-    mainLabel: String,
     modifier: Modifier = Modifier,
     storageHandler: StorageHandler = koinInject()
 ) {
+    val lang by storageHandler.languageState.collectAsState()
     val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
 
     Text(
-        text = mainLabel,
+        text = lang.artists,
         fontSize = 22.sp,
         color = secondaryAlternativeColor,
         modifier = modifier
@@ -142,21 +129,32 @@ private fun SearchButton(
 }
 
 @Composable
-private fun ParamsButton(
-    isPopupMenuExpandedState: MutableState<Boolean>,
+private fun ScannerButton(
+    artistsState: MutableState<List<Artist>>,
+    filteredArtistsState: MutableState<List<Artist>>,
     modifier: Modifier = Modifier,
     storageHandler: StorageHandler = koinInject()
 ) {
     val lang by storageHandler.languageState.collectAsState()
     val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
 
+    val coroutineScope = rememberCoroutineScope()
+
     IconButton(
         modifier = modifier,
-        onClick = { isPopupMenuExpandedState.value = true }
+        onClick = {
+            coroutineScope.launch {
+                scanArtists(
+                    artistsState = artistsState,
+                    filteredArtistsState = filteredArtistsState,
+                    lang = lang
+                )
+            }
+        }
     ) {
         Icon(
             modifier = Modifier.size(30.dp).alpha(ContentAlpha.medium),
-            painter = painterResource("images/param.png"),
+            painter = painterResource("images/scanner_icon.png"),
             contentDescription = lang.search,
             tint = secondaryAlternativeColor
         )

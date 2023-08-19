@@ -1,13 +1,9 @@
 package com.paranid5.prima.presentation.ui.artists
 
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -17,99 +13,172 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.paranid5.prima.data.Artist
+import com.paranid5.prima.domain.StorageHandler
+import com.paranid5.prima.presentation.ui.navigation.composition_locals.LocalRootNavigator
 import com.paranid5.prima.rust.RustLibs
-import com.paranid5.prima.presentation.ui.navigation.RootScreen
-import com.paranid5.prima.domain.localization.LocalizedString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun LazyItemScope.ArtistItem(
-    rootScreen: RootScreen,
-    curArtistState: MutableState<Artist?>,
-    artistsState: SnapshotStateList<Artist>,
-    ind: Int
+fun ArtistItem(
+    selectedArtistState: MutableState<Artist?>,
+    artistsState: MutableState<List<Artist>>,
+    ind: Int,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
 ) {
-    val artist = artistsState[ind]
+    val navigator = LocalRootNavigator.current
+
+    val primaryColor by storageHandler.primaryColorState.collectAsState()
+    val secondaryColor by storageHandler.secondaryColorState.collectAsState()
+
+    val artist by remember { derivedStateOf { artistsState.value[ind] } }
+    val isPopupMenuExpandedState = remember { mutableStateOf(false) }
 
     Card(
-        backgroundColor = Params.primaryColor,
+        backgroundColor = primaryColor,
         elevation = 15.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateItemPlacement(animationSpec = tween(durationMillis = 300)),
+        modifier = modifier.fillMaxWidth()
     ) {
         Button(
             onClick = {
-                curArtistState.value = artist
-                rootScreen.changeConfigToArtistTracks()
+                selectedArtistState.value = artist
+                navigator.changeConfigToArtistTracks()
             },
             modifier = Modifier.fillMaxSize().padding(3.dp),
-            colors = ButtonDefaults.buttonColors(backgroundColor = Params.secondaryColor),
+            colors = ButtonDefaults.buttonColors(backgroundColor = secondaryColor),
         ) {
             Row(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                    text = RustLibs.artistImageBind(artist.name),
-                    color = Params.primaryColor,
-                    fontSize = 24.sp
+                ArtistImageLabel(
+                    artistName = artist.name,
+                    modifier = Modifier.align(Alignment.CenterVertically)
                 )
 
                 Spacer(Modifier.width(20.dp).fillMaxHeight())
 
-                Text(
-                    modifier = Modifier.align(Alignment.CenterVertically).weight(1F),
-                    text = artist.name,
-                    color = Params.secondaryAlternativeColor,
-                    fontSize = 16.sp
+                ArtistNameLabel(
+                    artistName = artist.name,
+                    modifier = Modifier.align(Alignment.CenterVertically).weight(1F)
                 )
 
                 Spacer(Modifier.width(20.dp).fillMaxHeight())
 
-                val isPopupMenuExpandedState = remember { mutableStateOf(false) }
-
-                Button(
-                    onClick = { isPopupMenuExpandedState.value = true },
-                    modifier = Modifier
-                        .width(50.dp)
-                        .fillMaxHeight()
-                        .align(Alignment.CenterVertically),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
-                    elevation = null
-                ) {
-                    Image(
-                        painter = painterResource("images/three_dots.png"),
-                        contentDescription = Localization.trackCover.resource,
-                        modifier = Modifier.fillMaxSize(),
-                        colorFilter = ColorFilter.tint(Params.primaryColor),
-                        contentScale = ContentScale.Inside
-                    )
-
-                    ArtistSettingsMenu(artist, isPopupMenuExpandedState)
-                }
+                ArtistSettingsButton(
+                    artistName = artist.name,
+                    isPopupMenuExpandedState = isPopupMenuExpandedState,
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ArtistSettingsMenu(artist: Artist, isPopupMenuExpandedState: MutableState<Boolean>) = DropdownMenu(
-    expanded = isPopupMenuExpandedState.value,
-    onDismissRequest = { isPopupMenuExpandedState.value = false }
+private fun ArtistImageLabel(
+    artistName: String,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
 ) {
-    val coroutineScope = rememberCoroutineScope()
+    val primaryColor by storageHandler.primaryColorState.collectAsState()
 
-    ArtistSettingsMenuItem(title = Localization.addToFavourites) {
-        coroutineScope.launch(Dispatchers.IO) { RustLibs.onLikeArtistClicked(artist.name) }
-    }
+    Text(
+        modifier = modifier,
+        text = RustLibs.artistImageBind(artistName),
+        color = primaryColor,
+        fontSize = 24.sp
+    )
+}
 
-    ArtistSettingsMenuItem(title = Localization.hideArtist) {
-        // TODO: hide artist
+@Composable
+private fun ArtistNameLabel(
+    artistName: String,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
+) {
+    val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
+
+    Text(
+        modifier = modifier,
+        text = artistName,
+        color = secondaryAlternativeColor,
+        fontSize = 16.sp
+    )
+}
+
+@Composable
+private fun ArtistSettingsButton(
+    artistName: String,
+    isPopupMenuExpandedState: MutableState<Boolean>,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
+) {
+    val lang by storageHandler.languageState.collectAsState()
+    val primaryColor by storageHandler.primaryColorState.collectAsState()
+
+    Button(
+        onClick = { isPopupMenuExpandedState.value = true },
+        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
+        elevation = null,
+        modifier = modifier.width(50.dp).fillMaxHeight()
+    ) {
+        Image(
+            painter = painterResource("images/three_dots.png"),
+            contentDescription = lang.trackCover,
+            modifier = Modifier.fillMaxSize(),
+            colorFilter = ColorFilter.tint(primaryColor),
+            contentScale = ContentScale.Inside
+        )
+
+        ArtistSettingsMenu(
+            artistName = artistName,
+            isPopupMenuExpandedState = isPopupMenuExpandedState
+        )
     }
 }
 
 @Composable
-private fun ArtistSettingsMenuItem(title: LocalizedString, onClick: () -> Unit) = DropdownMenuItem(onClick) {
-    Text(text = title.resource, fontSize = 14.sp, color = Params.secondaryAlternativeColor)
+private fun ArtistSettingsMenu(
+    artistName: String,
+    isPopupMenuExpandedState: MutableState<Boolean>,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
+) {
+    val lang by storageHandler.languageState.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+
+    DropdownMenu(
+        modifier = modifier,
+        expanded = isPopupMenuExpandedState.value,
+        onDismissRequest = { isPopupMenuExpandedState.value = false }
+    ) {
+        ArtistSettingsMenuItem(title = lang.addToFavourites) {
+            coroutineScope.launch(Dispatchers.IO) { RustLibs.onLikeArtistClicked(artistName) }
+        }
+
+        ArtistSettingsMenuItem(title = lang.hideArtist) {
+            // TODO: hide artist
+        }
+    }
+}
+
+@Composable
+private fun ArtistSettingsMenuItem(
+    title: String,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject(),
+    onClick: () -> Unit
+) {
+    val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
+
+    DropdownMenuItem(
+        modifier = modifier,
+        onClick = onClick
+    ) {
+        Text(
+            text = title,
+            fontSize = 14.sp,
+            color = secondaryAlternativeColor
+        )
+    }
 }

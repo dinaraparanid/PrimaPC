@@ -1,7 +1,7 @@
 package com.paranid5.prima.rust;
 
 import com.paranid5.prima.data.Track;
-import com.paranid5.prima.domain.localization.Localization;
+import com.paranid5.prima.domain.Language;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.tag.FieldKey;
 import org.jetbrains.annotations.NotNull;
@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.util.List;
 
-public enum RustLibs {;
+public final class RustLibs {
     private static final String LIBRARY_PATH = "/home/paranid5/PROGRAMMING/kotlin/PrimaPC/src/main/kotlin/com/paranid5/prima/rust/target/release/libprima_pc.so";
 
     static {
@@ -61,11 +61,11 @@ public enum RustLibs {;
 
     public static native void setSpeedBlocking(float speed);
 
-    public static native float getVolume();
+    public static native float getVolumeBlocking();
 
-    public static native float getSpeed();
+    public static native float getSpeedBlocking();
 
-    public static native int getLoopingState();
+    public static native int getLoopingStateBlocking();
 
     /**
      * Gets track order's comparator and order as [int; 2]
@@ -73,7 +73,7 @@ public enum RustLibs {;
      */
 
     @NotNull
-    public static native int[] getTrackOrder();
+    public static native int[] getTrackOrderBlocking();
 
     /**
      * Updates track ordering
@@ -122,8 +122,8 @@ public enum RustLibs {;
     private static native String[] getAllArtistsBlocking(@NotNull String placeholder);
 
     @NotNull
-    public static String[] getAllArtistsBlocking() {
-        return getAllArtistsBlocking(Localization.unknownArtist.getResource());
+    public static String[] getAllArtistsBlocking(final @NotNull Language lang) {
+        return getAllArtistsBlocking(lang.getUnknownArtist());
     }
 
     @NotNull

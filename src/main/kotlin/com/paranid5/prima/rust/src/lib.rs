@@ -574,7 +574,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setVolumeBlock
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setSpeed(
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setSpeedBlocking(
     _env: JNIEnv,
     _class: JClass,
     speed: jfloat,
@@ -587,7 +587,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setSpeed(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getVolume(
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getVolumeBlocking(
     _env: JNIEnv,
     _class: JClass,
 ) -> jfloat {
@@ -596,7 +596,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getVolume(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getSpeed(
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getSpeedBlocking(
     _env: JNIEnv,
     _class: JClass,
 ) -> jfloat {
@@ -605,7 +605,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getSpeed(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getLoopingState(
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getLoopingStateBlocking(
     _env: JNIEnv,
     _class: JClass,
 ) -> jint {
@@ -620,7 +620,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getLoopingStat
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getTrackOrder(
+pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getTrackOrderBlocking(
     env: JNIEnv,
     _class: JClass,
 ) -> jintArray {

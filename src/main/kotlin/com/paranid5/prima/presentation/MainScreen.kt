@@ -1,6 +1,5 @@
 package com.paranid5.prima.presentation
 
-import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Colors
@@ -16,189 +15,181 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.paranid5.prima.data.Artist
 import com.paranid5.prima.data.Track
-import com.paranid5.prima.rust.RustLibs
-import com.paranid5.prima.presentation.fragments.artists.ArtistTracksAppBar
-import com.paranid5.prima.presentation.fragments.main_menu_fragments.favourites.FavouritesAppBar
-import com.paranid5.prima.presentation.fragments.main_menu_fragments.favourites.FavouritesScreen
-import com.paranid5.prima.presentation.fragments.main_menu_fragments.artists.ArtistsAppBar
-import com.paranid5.prima.presentation.fragments.main_menu_fragments.favourites.FavouriteFragments
-import com.paranid5.prima.presentation.fragments.main_menu_fragments.tracks.TracksAppBar
-import com.paranid5.prima.presentation.fragments.playbar_fragments.current_playlist.CurrentPlaylistAppBar
+import com.paranid5.prima.domain.StorageHandler
+import com.paranid5.prima.presentation.screens.artists.ArtistTracksAppBar
+import com.paranid5.prima.presentation.screens.main_menu_fragments.artists.ArtistsAppBar
+import com.paranid5.prima.presentation.screens.main_menu_fragments.favourites.FavouritesAppBar
+import com.paranid5.prima.presentation.screens.main_menu_fragments.tracks.TracksAppBar
+import com.paranid5.prima.presentation.screens.playbar_fragments.current_playlist.CurrentPlaylistAppBar
 import com.paranid5.prima.presentation.ui.navigation.Config
+import com.paranid5.prima.presentation.ui.navigation.FavouriteNavigator
+import com.paranid5.prima.presentation.ui.navigation.RootNavigator
 import com.paranid5.prima.presentation.ui.navigation.RootScreen
-import com.paranid5.prima.presentation.ui.navigation.RootView
+import com.paranid5.prima.presentation.ui.navigation.composition_locals.LocalFavouriteNavigator
+import com.paranid5.prima.presentation.ui.navigation.composition_locals.LocalRootNavigator
+import com.paranid5.prima.rust.RustLibs
 import kotlinx.coroutines.*
+import org.koin.compose.koinInject
 import java.awt.Window
 
 @Composable
-@Preview
-fun MainScreen(owner: Window) {
-    val primary = Params.primaryColor
-    val secondary = Params.secondaryColor
+fun MainScreen(
+    owner: Window,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
+) {
+    val primaryColor by storageHandler.primaryColorState.collectAsState()
+    val secondaryColor by storageHandler.secondaryColorState.collectAsState()
+    val theme by storageHandler.themeState.collectAsState()
+
+    // Playing track
+    val currentTrackState = remember { mutableStateOf<Track?>(null) }
+    val playbackPositionState = remember { mutableStateOf(0F) }
+    val isLikedState = remember { mutableStateOf(false) }
+
+    // Playback
+    val isPlayingState = remember { mutableStateOf(false) }
+    val isPlayingCoverLoadedState = remember { mutableStateOf(false) }
+    val isPlaybackTrackDraggingState = remember { mutableStateOf(false) }
+    val loopingState = remember { mutableStateOf(0) }
+    val speedState = remember { mutableStateOf(0F) }
+    val volumeState = remember { mutableStateOf(0F) }
+
+    // All tracks
+    val allTracksState = remember { mutableStateListOf<Track>() }
+    val filteredAllTracksState = remember { mutableStateListOf<Track>() }
+
+    // All artists
+    val allArtistsState = remember { mutableStateListOf<Artist>() }
+    val filteredAllArtistsState = remember { mutableStateListOf<Artist>() }
+
+    val selectedArtist = remember { mutableStateOf<Artist?>(null) }
+
+    // Artist tracks
+    val artistTrackListState = remember { mutableStateListOf<Track>() }
+    val filteredArtistTrackListState = remember { mutableStateListOf<Track>() }
+
+    // Current Playlist
+    val currentPlaylistTracksState = mutableStateListOf<Track>()
+    val currentPlaylistFilteredTracksState = mutableStateListOf<Track>()
+
+    // Favourite Tracks
+    val favouriteTracksState = mutableStateListOf<Track>()
+    val filteredFavouriteTracksState = mutableStateListOf<Track>()
+
+    // Favourite Artists
+    val favouriteArtistsState = remember { mutableStateListOf<Artist>() }
+    val filteredFavouriteArtistsState = remember { mutableStateListOf<Artist>() }
+
+    // Navigators
+    val rootNavigator = RootNavigator(
+        componentContext = DefaultComponentContext(LifecycleRegistry()),
+        initialConfig = Config.MainMenuConfig.Tracks
+    )
+
+    val favouriteNavigator = FavouriteNavigator(
+        componentContext = DefaultComponentContext(LifecycleRegistry()),
+        initialConfig = Config.FavouritesConfig.Tracks
+    )
+
+    LaunchedEffect(Unit) {
+        val curTrackTask = async(Dispatchers.IO) { RustLibs.getCurTrackBlocking() }
+        val playbackPosTask = async(Dispatchers.IO) { RustLibs.getPlaybackPositionBlocking().toFloat() }
+
+        val loopingTask = async(Dispatchers.IO) { RustLibs.getLoopingStateBlocking() }
+        val speedTask = async(Dispatchers.IO) { RustLibs.getSpeedBlocking() }
+        val volumeTask = async(Dispatchers.IO) { RustLibs.getVolumeBlocking() }
+
+        currentTrackState.value = curTrackTask.await()
+        playbackPositionState.value = playbackPosTask.await()
+
+        loopingState.value = loopingTask.await()
+        speedState.value = speedTask.await()
+        volumeState.value = volumeTask.await()
+    }
+
+    LaunchedEffect(currentTrackState.value) {
+        isLikedState.value = currentTrackState.value
+            ?.let { withContext(Dispatchers.IO) { RustLibs.isTrackLiked(it) } }
+            ?: false
+    }
 
     MaterialTheme(
         colors = Colors(
-            primary = primary,
-            primaryVariant = primary,
-            secondary = secondary,
-            secondaryVariant = secondary,
-            background = secondary,
-            surface = secondary,
+            primary = primaryColor,
+            primaryVariant = primaryColor,
+            secondary = secondaryColor,
+            secondaryVariant = secondaryColor,
+            background = secondaryColor,
+            surface = secondaryColor,
             error = Color.Red,
-            onPrimary = primary,
-            onSecondary = secondary,
-            onBackground = secondary,
-            onSurface = secondary,
+            onPrimary = primaryColor,
+            onSecondary = secondaryColor,
+            onBackground = secondaryColor,
+            onSurface = secondaryColor,
             onError = Color.Red,
-            isLight = !Params.theme.isNight
+            isLight = theme.isNight
         )
     ) {
-        val coroutineScope = rememberCoroutineScope()
-        val currentTrackState: MutableState<Track?> = remember { mutableStateOf(null) }
-        val playbackPositionState = remember { mutableStateOf(0F) }
-        val isLikedState = remember { mutableStateOf(false) }
-
-        coroutineScope.launch {
-            currentTrackState.value = withContext(Dispatchers.IO) {
-                RustLibs.getCurTrackBlocking()
-            }
-
-            playbackPositionState.value = RustLibs.getPlaybackPositionBlocking().toFloat()
-            isLikedState.value = currentTrackState.value?.let(RustLibs::isTrackLiked) ?: false
-        }
-
-        val isPlayingState = remember { mutableStateOf(false) }
-        val isPlayingCoverLoadedState = remember { mutableStateOf(false) }
-        val isPlaybackTrackDraggingState = remember { mutableStateOf(false) }
-        val loopingState = remember { mutableStateOf(RustLibs.getLoopingState()) }
-        val speedState = remember { mutableStateOf(RustLibs.getSpeed()) }
-        val volumeState = remember { mutableStateOf(RustLibs.getVolume()) }
-
-        // All tracks
-        val allTracksState = remember { mutableStateListOf<Track>() }
-        val filteredAllTracksState = remember { mutableStateListOf<Track>() }
-
-        // All artists
-        val allArtistsState = remember { mutableStateListOf<Artist>() }
-        val filteredAllArtistsState = remember { mutableStateListOf<Artist>() }
-
-        val curArtist = remember { mutableStateOf<Artist?>(null) }
-
-        // Artist tracks
-        val artistTrackListState = remember { mutableStateListOf<Track>() }
-        val filteredArtistTrackListState = remember { mutableStateListOf<Track>() }
-
-        // Current Playlist
-        val currentPlaylistTracksState = mutableStateListOf<Track>()
-        val currentPlaylistFilteredTracksState = mutableStateListOf<Track>()
-
-        val favouriteFragmentState = mutableStateOf(FavouriteFragments.TRACKS)
-
-        // Favourite Tracks
-        val favouriteTracksState = mutableStateListOf<Track>()
-        val filteredFavouriteTracksState = mutableStateListOf<Track>()
-
-        // Favourite Artists
-        val favouriteArtistsState = remember { mutableStateListOf<Artist>() }
-        val filteredFavouriteArtistsState = remember { mutableStateListOf<Artist>() }
-
-        val rootScreen = RootScreen(DefaultComponentContext(LifecycleRegistry())).apply { start() }
-
-        val favouritesScreen = FavouritesScreen(
-            DefaultComponentContext(LifecycleRegistry()),
-            favouriteFragmentState
-        ).apply { start() }
-
-        Surface(color = secondary, modifier = Modifier.fillMaxSize()) {
+        Surface(color = secondaryColor, modifier = modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
-                Scaffold(
-                    topBar = {
-                        when (rootScreen.currentConfigState.value) {
-                            Config.MainMenuConfig.Tracks -> TracksAppBar(allTracksState, filteredAllTracksState)
-
-                            Config.MainMenuConfig.Artists -> ArtistsAppBar(allArtistsState, filteredAllArtistsState)
-
-                            Config.PlaybarConfig.CurrentPlaylist -> CurrentPlaylistAppBar(
-                                currentPlaylistTracksState,
-                                currentPlaylistFilteredTracksState
-                            )
-
-                            Config.MainMenuConfig.Favourites -> FavouritesAppBar(
-                                favouriteFragmentState,
-                                favouriteTracksState,
-                                filteredFavouriteTracksState,
-                                favouriteArtistsState,
-                                filteredFavouriteArtistsState
-                            )
-
-                            Config.ArtistTracks -> ArtistTracksAppBar(
-                                curArtist.value!!,
-                                artistTrackListState,
-                                filteredArtistTrackListState
-                            )
-
-                            // TODO: other app bars
-                            Config.GTMConfig.AboutGame -> Unit
-                            Config.GTMConfig.Game -> Unit
-                            Config.MainMenuConfig.AboutApp -> Unit
-                            Config.MainMenuConfig.GTM -> Unit
-                            Config.MainMenuConfig.MP3Converter -> Unit
-                            Config.MainMenuConfig.Settings -> Unit
-                            Config.MainMenuConfig.Statistics -> Unit
-                            Config.MainMenuConfig.TrackCollections -> Unit
-                            Config.PlaybarConfig.Equalizer -> Unit
-                            Config.PlaybarConfig.TrimTrack -> Unit
-                            Config.SettingsConfig.FilesLocation -> Unit
-                            Config.SettingsConfig.Fonts -> Unit
-                            Config.SettingsConfig.HiddenTracks -> Unit
-                            Config.SettingsConfig.Themes -> Unit
-                            else -> Unit // View Pager's fragments
-                        }
-                    },
-                    bottomBar = {
-                        PlayingBar(
-                            rootScreen,
-                            allTracksState,
-                            currentTrackState,
-                            isPlayingCoverLoadedState,
-                            playbackPositionState,
-                            isPlayingState,
-                            isPlaybackTrackDraggingState,
-                            loopingState,
-                            speedState,
-                            volumeState,
-                            isLikedState
-                        )
-                    }
+                CompositionLocalProvider(
+                    LocalRootNavigator provides rootNavigator,
+                    LocalFavouriteNavigator provides favouriteNavigator
                 ) {
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        NavigationMenu(rootScreen)
+                    Scaffold(
+                        topBar = { TopBar() },
+                        bottomBar = { PlayingBar() }
+                    ) {
+                        Row(modifier = Modifier.fillMaxSize()) {
+                            NavigationMenu(
+                                modifier = Modifier.padding(bottom = 160.dp)
+                            )
 
-                        Spacer(Modifier.fillMaxHeight().width(3.dp).background(Params.primaryColor))
+                            Spacer(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .width(3.dp)
+                                    .background(primaryColor)
+                            )
 
-                        RootView(
-                            rootScreen,
-                            favouritesScreen,
-                            currentTrackState,
-                            isPlayingState,
-                            isPlayingCoverLoadedState,
-                            playbackPositionState,
-                            loopingState,
-                            allTracksState,
-                            filteredAllTracksState,
-                            currentPlaylistTracksState,
-                            currentPlaylistFilteredTracksState,
-                            allArtistsState,
-                            filteredAllArtistsState,
-                            isPlaybackTrackDraggingState,
-                            speedState,
-                            isLikedState,
-                            curArtist
-                        )
+                            RootScreen()
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TopBar(modifier: Modifier = Modifier) {
+    val navigator = LocalRootNavigator.current
+    val screenConfig by navigator.currentConfigState.collectAsState()
+
+    when (screenConfig) {
+        Config.MainMenuConfig.Tracks -> TracksAppBar()
+        Config.MainMenuConfig.Artists -> ArtistsAppBar()
+        Config.PlaybarConfig.CurrentPlaylist -> CurrentPlaylistAppBar()
+        Config.MainMenuConfig.Favourites -> FavouritesAppBar()
+        Config.ArtistTracks -> ArtistTracksAppBar()
+
+        // TODO: other app bars
+        Config.GTMConfig.AboutGame -> Unit
+        Config.GTMConfig.Game -> Unit
+        Config.MainMenuConfig.AboutApp -> Unit
+        Config.MainMenuConfig.GTM -> Unit
+        Config.MainMenuConfig.MP3Converter -> Unit
+        Config.MainMenuConfig.Settings -> Unit
+        Config.MainMenuConfig.Statistics -> Unit
+        Config.MainMenuConfig.TrackCollections -> Unit
+        Config.PlaybarConfig.Equalizer -> Unit
+        Config.PlaybarConfig.TrimTrack -> Unit
+        Config.SettingsConfig.FilesLocation -> Unit
+        Config.SettingsConfig.Fonts -> Unit
+        Config.SettingsConfig.HiddenTracks -> Unit
+        Config.SettingsConfig.Themes -> Unit
+        else -> Unit
     }
 }
 
@@ -213,8 +204,7 @@ suspend fun startPlaybackControlTasks(
     allTracksState: SnapshotStateList<Track>,
     isPlaybackTrackDraggingState: State<Boolean>,
     speedState: State<Float>
-): Unit = coroutineScope {
-    // NonCancelable fixes cancelable delay
+) = coroutineScope {
     playbackControlTasks = launch(NonCancellable) {
         runCalculationOfSliderPos(
             isPlaybackTrackDraggingState,

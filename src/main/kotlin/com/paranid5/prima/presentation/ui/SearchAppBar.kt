@@ -14,13 +14,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.paranid5.prima.domain.StorageHandler
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import org.koin.compose.koinInject
 
 @Composable
 fun <T> SearchAppBar(
     isSearchingState: MutableState<Boolean>,
-    allEntitiesState: MutableState<List<T>>,
-    filteredEntitiesState: MutableState<List<T>>,
+    allEntitiesState: MutableStateFlow<List<T>>,
+    filteredEntitiesState: MutableStateFlow<List<T>>,
     modifier: Modifier = Modifier,
     storageHandler: StorageHandler = koinInject(),
     onTextChanged: suspend (String) -> Unit,
@@ -101,8 +103,8 @@ private fun SearchIcon(
 @Composable
 private fun <T> CancelSearchIcon(
     textState: MutableState<String>,
-    allEntitiesState: MutableState<List<T>>,
-    filteredEntitiesState: MutableState<List<T>>,
+    allEntitiesState: MutableStateFlow<List<T>>,
+    filteredEntitiesState: MutableStateFlow<List<T>>,
     isSearchingState: MutableState<Boolean>,
     modifier: Modifier = Modifier,
     storageHandler: StorageHandler = koinInject(),
@@ -116,7 +118,7 @@ private fun <T> CancelSearchIcon(
                 textState.value.isNotEmpty() -> textState.value = ""
 
                 else -> {
-                    filteredEntitiesState.value = allEntitiesState.value
+                    filteredEntitiesState.update { allEntitiesState.value }
                     isSearchingState.value = false
                 }
             }

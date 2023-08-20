@@ -11,7 +11,7 @@ import java.io.File;
 import java.util.List;
 
 public final class RustLibs {
-    private static final String LIBRARY_PATH = "/home/paranid5/PROGRAMMING/kotlin/PrimaPC/src/main/kotlin/com/paranid5/prima/rust/target/release/libprima_pc.so";
+    private static final String LIBRARY_PATH = "/home/paranid5/PROGRAMMING/Kotlin/PrimaPC/src/main/kotlin/com/paranid5/prima/rust/target/release/libprima_pc.so";
 
     static {
         System.load(LIBRARY_PATH);
@@ -94,7 +94,7 @@ public final class RustLibs {
     @NotNull
     public static native Track[] getFavouriteTracks();
 
-    @Nullable
+    @NotNull
     public static native Track[] getCurPlaylistBlocking();
 
     public static native void updateAndStoreCurPlaylistBlocking(@NotNull List<Track> curPlaylist);

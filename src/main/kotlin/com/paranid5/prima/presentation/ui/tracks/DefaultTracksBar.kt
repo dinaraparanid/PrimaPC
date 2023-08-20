@@ -16,21 +16,39 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.paranid5.prima.data.Track
+import com.paranid5.prima.domain.StorageHandler
+import com.paranid5.prima.domain.scanTracks
 import com.paranid5.prima.rust.RustLibs
-import com.paranid5.prima.presentation.screens.main_menu_fragments.tracks.scanTracks
-import com.paranid5.prima.domain.localization.LocalizedString
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 
 @Composable
 fun DefaultTracksBar(
-    tracksState: SnapshotStateList<Track>,
-    filteredTracksState: SnapshotStateList<Track>,
-    listState: LazyListState
+    tracksState: MutableStateFlow<List<Track>>,
+    filteredTracksState: MutableStateFlow<List<Track>>,
+    listState: LazyListState,
+    modifier: Modifier = Modifier,
 ) {
-    val coroutineScope = rememberCoroutineScope()
+    val trackOrdState = remember {
+        mutableStateListOf<Int>()
+    }
+
+    val isPopupMenuExpandedState = remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        trackOrdState.addAll(
+            withContext(Dispatchers.IO) {
+                RustLibs.getTrackOrderBlocking().toList()
+            }
+        )
+    }
 
     Scaffold(
-        modifier = Modifier.fillMaxWidth().height(60.dp),
+        modifier = modifier.fillMaxWidth().height(60.dp),
         drawerElevation = 10.dp
     ) {
         Surface(
@@ -38,92 +56,144 @@ fun DefaultTracksBar(
             shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
             elevation = 30.dp
         ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth().height(60.dp),
-                shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
-                elevation = 10.dp
-            ) {
-                Row(modifier = Modifier.fillMaxWidth().height(60.dp)) {
-                    Button(
-                        onClick = {
-                            filteredTracksState.shuffle()
-                            coroutineScope.launch { listState.scrollToItem(0) }
-                        },
-                        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
-                        elevation = null,
-                        modifier = Modifier.width(70.dp).height(60.dp),
-                    ) {
-                        Image(
-                            painter = painterResource("images/shuffle.png"),
-                            contentDescription = Localization.trackCover.resource,
-                            modifier = Modifier.fillMaxSize(),
-                            colorFilter = ColorFilter.tint(Params.primaryColor),
-                            contentScale = ContentScale.FillWidth
-                        )
-                    }
+            Row(Modifier.fillMaxWidth().height(60.dp)) {
+                ShuffleButton(
+                    filteredTracksState = filteredTracksState,
+                    listState = listState
+                )
 
-                    Text(
-                        text = "${Localization.tracks.resource}: ${filteredTracksState.size}",
-                        fontSize = 20.sp,
-                        color = Params.primaryColor,
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
+                TracksNumberLabel(
+                    filteredTracksState = filteredTracksState,
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                )
 
-                    Spacer(modifier = Modifier.weight(1F))
+                Spacer(Modifier.weight(1F))
 
-                    Row(modifier = Modifier.fillMaxHeight().padding(end = 20.dp)) {
-                        val trackOdrState = remember {
-                            mutableStateListOf(*RustLibs.getTrackOrderBlocking().toTypedArray())
-                        }
-
-                        val isPopupMenuExpandedState = remember { mutableStateOf(false) }
-
-                        Button(
-                            onClick = { isPopupMenuExpandedState.value = true },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
-                            elevation = null,
-                            modifier = Modifier.align(Alignment.CenterVertically),
-                        ) {
-                            Image(
-                                painter = painterResource("images/arrow_down.png"),
-                                contentDescription = Localization.trackOrder.resource,
-                                modifier = Modifier.height(20.dp),
-                                colorFilter = ColorFilter.tint(Params.primaryColor),
-                                contentScale = ContentScale.Inside
-                            )
-                        }
-
-                        TrackOrderMenu(isPopupMenuExpandedState, trackOdrState, tracksState, filteredTracksState)
-
-                        Spacer(modifier = Modifier.fillMaxHeight().width(5.dp))
-
-                        Text(
-                            modifier = Modifier.align(Alignment.CenterVertically),
-                            text = when (trackOdrState.first()) {
-                                0 -> Localization.byTitle.resource
-                                1 -> Localization.byArtist.resource
-                                2 -> Localization.byAlbum.resource
-                                else -> Localization.byDate.resource
-                            },
-                            color = Params.primaryColor,
-                            fontSize = 20.sp
-                        )
-
-                        Spacer(modifier = Modifier.fillMaxHeight().width(5.dp))
-
-                        Text(
-                            modifier = Modifier.align(Alignment.CenterVertically),
-                            text = when (trackOdrState.last()) {
-                                4 -> Localization.ascending.resource
-                                else -> Localization.descending.resource
-                            },
-                            color = Params.primaryColor,
-                            fontSize = 20.sp
-                        )
-                    }
-                }
+                TrackOrderBar(
+                    tracksState = tracksState,
+                    filteredTracksState = filteredTracksState,
+                    isPopupMenuExpandedState = isPopupMenuExpandedState,
+                    trackOrdState = trackOrdState,
+                    modifier = Modifier.padding(end = 20.dp)
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun ShuffleButton(
+    filteredTracksState: MutableStateFlow<List<Track>>,
+    listState: LazyListState,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val lang by storageHandler.languageState.collectAsState()
+    val primaryColor by storageHandler.primaryColorState.collectAsState()
+
+    Button(
+        onClick = {
+            filteredTracksState.update { it.shuffled() }
+            coroutineScope.launch { listState.scrollToItem(0) }
+        },
+        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
+        elevation = null,
+        modifier = modifier.width(70.dp).height(60.dp),
+    ) {
+        Image(
+            painter = painterResource("images/shuffle.png"),
+            contentDescription = lang.trackCover,
+            modifier = Modifier.fillMaxSize(),
+            colorFilter = ColorFilter.tint(primaryColor),
+            contentScale = ContentScale.FillWidth
+        )
+    }
+}
+
+@Composable
+private fun TracksNumberLabel(
+    filteredTracksState: MutableStateFlow<List<Track>>,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
+) {
+    val lang by storageHandler.languageState.collectAsState()
+    val primaryColor by storageHandler.primaryColorState.collectAsState()
+
+    val tracksOnScreen by filteredTracksState.collectAsState()
+    val tracksNumber by remember { derivedStateOf { tracksOnScreen.size } }
+
+    Text(
+        text = "${lang.tracks}: $tracksNumber",
+        fontSize = 20.sp,
+        color = primaryColor,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun TrackOrderBar(
+    tracksState: MutableStateFlow<List<Track>>,
+    filteredTracksState: MutableStateFlow<List<Track>>,
+    isPopupMenuExpandedState: MutableState<Boolean>,
+    trackOrdState: SnapshotStateList<Int>,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
+) {
+    val lang by storageHandler.languageState.collectAsState()
+    val primaryColor by storageHandler.primaryColorState.collectAsState()
+
+    if (trackOrdState.isEmpty())
+        return
+
+    Row(modifier.fillMaxHeight().padding(end = 20.dp)) {
+        Button(
+            onClick = { isPopupMenuExpandedState.value = true },
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
+            elevation = null,
+            modifier = Modifier.align(Alignment.CenterVertically),
+        ) {
+            Image(
+                painter = painterResource("images/arrow_down.png"),
+                contentDescription = lang.trackOrder,
+                modifier = Modifier.height(20.dp),
+                colorFilter = ColorFilter.tint(primaryColor),
+                contentScale = ContentScale.Inside
+            )
+        }
+
+        TrackOrderMenu(
+            isPopupMenuExpandedState = isPopupMenuExpandedState,
+            trackOrdState,
+            tracksState,
+            filteredTracksState
+        )
+
+        Spacer(modifier = Modifier.fillMaxHeight().width(5.dp))
+
+        Text(
+            modifier = Modifier.align(Alignment.CenterVertically),
+            text = when (trackOrdState.first()) {
+                0 -> lang.byTitle
+                1 -> lang.byArtist
+                2 -> lang.byAlbum
+                else -> lang.byDate
+            },
+            color = primaryColor,
+            fontSize = 20.sp
+        )
+
+        Spacer(modifier = Modifier.fillMaxHeight().width(5.dp))
+
+        Text(
+            modifier = Modifier.align(Alignment.CenterVertically),
+            text = when (trackOrdState.last()) {
+                4 -> lang.ascending
+                else -> lang.descending
+            },
+            color = primaryColor,
+            fontSize = 20.sp
+        )
     }
 }
 
@@ -131,41 +201,54 @@ fun DefaultTracksBar(
 private fun TrackOrderMenu(
     isPopupMenuExpandedState: MutableState<Boolean>,
     trackOrdState: SnapshotStateList<Int>,
-    tracksState: SnapshotStateList<Track>,
-    filteredTracksState: SnapshotStateList<Track>
-) =
+    tracksState: MutableStateFlow<List<Track>>,
+    filteredTracksState: MutableStateFlow<List<Track>>,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
+) {
+    val lang by storageHandler.languageState.collectAsState()
+
     DropdownMenu(
+        modifier = modifier,
         expanded = isPopupMenuExpandedState.value,
         onDismissRequest = { isPopupMenuExpandedState.value = false }
     ) {
         Row {
             Column(modifier = Modifier.weight(1F)) {
-                TrackOrderMenuItem(0, Localization.byTitle, trackOrdState, tracksState, filteredTracksState)
-                TrackOrderMenuItem(1, Localization.byArtist, trackOrdState, tracksState, filteredTracksState)
-                TrackOrderMenuItem(2, Localization.byAlbum, trackOrdState, tracksState, filteredTracksState)
-                TrackOrderMenuItem(3, Localization.byDate, trackOrdState, tracksState, filteredTracksState)
-                TrackOrderMenuItem(4, Localization.byNumberInAlbum, trackOrdState, tracksState, filteredTracksState)
+                TrackOrderMenuItem(0, lang.byTitle, trackOrdState, tracksState, filteredTracksState)
+                TrackOrderMenuItem(1, lang.byArtist, trackOrdState, tracksState, filteredTracksState)
+                TrackOrderMenuItem(2, lang.byAlbum, trackOrdState, tracksState, filteredTracksState)
+                TrackOrderMenuItem(3, lang.byDate, trackOrdState, tracksState, filteredTracksState)
+                TrackOrderMenuItem(4, lang.byNumberInAlbum, trackOrdState, tracksState, filteredTracksState)
             }
 
             Column(modifier = Modifier.weight(1F)) {
-                TrackOrderMenuItem(5, Localization.ascending, trackOrdState, tracksState, filteredTracksState)
-                TrackOrderMenuItem(6, Localization.descending, trackOrdState, tracksState, filteredTracksState)
+                TrackOrderMenuItem(5, lang.ascending, trackOrdState, tracksState, filteredTracksState)
+                TrackOrderMenuItem(6, lang.descending, trackOrdState, tracksState, filteredTracksState)
             }
         }
     }
+}
 
 @Composable
 private fun TrackOrderMenuItem(
     order: Int,
-    title: LocalizedString,
+    title: String,
     trackOrdState: SnapshotStateList<Int>,
-    tracksState: SnapshotStateList<Track>,
-    filteredTracksState: SnapshotStateList<Track>
+    tracksState: MutableStateFlow<List<Track>>,
+    filteredTracksState: MutableStateFlow<List<Track>>,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
 ) {
-    val isChecked = order in trackOrdState
+    val primaryColor by storageHandler.primaryColorState.collectAsState()
+    val secondaryColor by storageHandler.secondaryColorState.collectAsState()
+    val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
+
     val coroutineScope = rememberCoroutineScope()
+    val isChecked by remember { derivedStateOf { order in trackOrdState } }
 
     DropdownMenuItem(
+        modifier = modifier,
         onClick = {
             if (!isChecked) {
                 when (order) {
@@ -173,8 +256,10 @@ private fun TrackOrderMenuItem(
                     else -> trackOrdState[1] = order
                 }
 
-                RustLibs.setTrackOrder(trackOrdState[0], trackOrdState[1])
-                coroutineScope.launch { scanTracks(tracksState, filteredTracksState) }
+                coroutineScope.launch {
+                    RustLibs.setTrackOrderBlocking(trackOrdState[0], trackOrdState[1])
+                    scanTracks(tracksState, filteredTracksState)
+                }
             }
         }
     ) {
@@ -187,18 +272,18 @@ private fun TrackOrderMenuItem(
                         else -> trackOrdState[1] = order
                     }
 
-                    RustLibs.setTrackOrder(trackOrdState[0], trackOrdState[1])
+                    RustLibs.setTrackOrderBlocking(trackOrdState[0], trackOrdState[1])
                     coroutineScope.launch { scanTracks(tracksState, filteredTracksState) }
                 }
             },
             colors = CheckboxDefaults.colors(
-                checkedColor = Params.primaryColor,
-                checkmarkColor = Params.secondaryColor,
-                uncheckedColor = Params.secondaryAlternativeColor,
-                disabledColor = Params.secondaryAlternativeColor
+                checkedColor = primaryColor,
+                checkmarkColor = secondaryColor,
+                uncheckedColor = secondaryAlternativeColor,
+                disabledColor = secondaryAlternativeColor
             )
         )
 
-        Text(text = title.resource, fontSize = 14.sp, color = Params.secondaryAlternativeColor)
+        Text(text = title, fontSize = 14.sp, color = secondaryAlternativeColor)
     }
 }

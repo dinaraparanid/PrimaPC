@@ -17,23 +17,28 @@ import com.paranid5.prima.domain.StorageHandler
 import com.paranid5.prima.presentation.ui.navigation.composition_locals.LocalRootNavigator
 import com.paranid5.prima.rust.RustLibs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @Composable
 fun ArtistItem(
-    selectedArtistState: MutableState<Artist?>,
-    artistsState: MutableState<List<Artist>>,
-    ind: Int,
+    selectedArtistState: MutableStateFlow<Artist?>,
+    artistsState: MutableStateFlow<List<Artist>>,
+    index: Int,
     modifier: Modifier = Modifier,
     storageHandler: StorageHandler = koinInject()
 ) {
     val navigator = LocalRootNavigator.current
 
+    val artists by artistsState.collectAsState()
+    val artistOrNull by remember { derivedStateOf { artists.getOrNull(index) } }
+    val artist = artistOrNull ?: return
+
     val primaryColor by storageHandler.primaryColorState.collectAsState()
     val secondaryColor by storageHandler.secondaryColorState.collectAsState()
 
-    val artist by remember { derivedStateOf { artistsState.value[ind] } }
     val isPopupMenuExpandedState = remember { mutableStateOf(false) }
 
     Card(
@@ -43,7 +48,7 @@ fun ArtistItem(
     ) {
         Button(
             onClick = {
-                selectedArtistState.value = artist
+                selectedArtistState.update { artist }
                 navigator.changeConfigToArtistTracks()
             },
             modifier = Modifier.fillMaxSize().padding(3.dp),

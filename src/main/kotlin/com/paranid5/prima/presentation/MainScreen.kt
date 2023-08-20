@@ -20,15 +20,19 @@ import com.paranid5.prima.presentation.screens.artists.ArtistTracksAppBar
 import com.paranid5.prima.presentation.screens.main_menu_fragments.artists.ArtistsAppBar
 import com.paranid5.prima.presentation.screens.main_menu_fragments.favourites.FavouritesAppBar
 import com.paranid5.prima.presentation.screens.main_menu_fragments.tracks.TracksAppBar
-import com.paranid5.prima.presentation.screens.playbar_fragments.current_playlist.CurrentPlaylistAppBar
+import com.paranid5.prima.presentation.screens.playbar_screens.current_playlist.CurrentPlaylistAppBar
 import com.paranid5.prima.presentation.ui.navigation.Config
 import com.paranid5.prima.presentation.ui.navigation.FavouriteNavigator
 import com.paranid5.prima.presentation.ui.navigation.RootNavigator
 import com.paranid5.prima.presentation.ui.navigation.RootScreen
 import com.paranid5.prima.presentation.ui.navigation.composition_locals.LocalFavouriteNavigator
 import com.paranid5.prima.presentation.ui.navigation.composition_locals.LocalRootNavigator
+import com.paranid5.prima.presentation.ui.playing_bar.PlayingBar
 import com.paranid5.prima.rust.RustLibs
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import org.koin.compose.koinInject
 import java.awt.Window
 
@@ -190,175 +194,5 @@ private fun TopBar(modifier: Modifier = Modifier) {
         Config.SettingsConfig.HiddenTracks -> Unit
         Config.SettingsConfig.Themes -> Unit
         else -> Unit
-    }
-}
-
-private var playbackControlTasks: Job? = null
-
-suspend fun startPlaybackControlTasks(
-    currentTrackState: MutableState<Track?>,
-    isPlayingState: MutableState<Boolean>,
-    isPlayingCoverLoadedState: MutableState<Boolean>,
-    playbackPositionState: MutableState<Float>,
-    loopingState: MutableState<Int>,
-    allTracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>,
-    speedState: State<Float>
-) = coroutineScope {
-    playbackControlTasks = launch(NonCancellable) {
-        runCalculationOfSliderPos(
-            isPlaybackTrackDraggingState,
-            playbackPositionState,
-        )
-
-        if (RustLibs.getPlaybackPositionBlocking() == currentTrackState.value?.duration)
-            onPlaybackCompletition(
-                currentTrackState,
-                isPlayingState,
-                isPlayingCoverLoadedState,
-                playbackPositionState,
-                loopingState,
-                allTracksState,
-                isPlaybackTrackDraggingState,
-                speedState
-            )
-    }
-}
-
-fun cancelPlaybackControlTasks() {
-    playbackControlTasks?.cancel()
-    playbackControlTasks = null
-}
-
-private suspend fun runCalculationOfSliderPos(
-    isPlaybackTrackDraggingState: State<Boolean>,
-    playbackPositionState: MutableState<Float>,
-) {
-    while (RustLibs.isPlaying() && !isPlaybackTrackDraggingState.value) {
-        val duration = RustLibs.getPlaybackPositionBlocking().toFloat()
-        playbackPositionState.value = duration
-        delay(50)
-    }
-}
-
-suspend fun switchToNextTrack(
-    currentTrackState: MutableState<Track?>,
-    isPlayingState: MutableState<Boolean>,
-    isPlayingCoverLoadedState: MutableState<Boolean>,
-    playbackPositionState: MutableState<Float>,
-    loopingState: MutableState<Int>,
-    allTracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>,
-    speedState: State<Float>
-) = coroutineScope {
-    launch(Dispatchers.IO) {
-        RustLibs.onNextTrackClickedBlocking()
-        currentTrackState.value = RustLibs.getCurTrackBlocking()
-        isPlayingState.value = true
-        isPlayingCoverLoadedState.value = false
-        playbackPositionState.value = 0F
-
-        startPlaybackControlTasks(
-            currentTrackState,
-            isPlayingState,
-            isPlayingCoverLoadedState,
-            playbackPositionState,
-            loopingState,
-            allTracksState,
-            isPlaybackTrackDraggingState,
-            speedState
-        )
-    }
-}
-
-private suspend fun replayCurrentTrack(
-    currentTrackState: MutableState<Track?>,
-    isPlayingState: MutableState<Boolean>,
-    isPlayingCoverLoadedState: MutableState<Boolean>,
-    playbackPositionState: MutableState<Float>,
-    loopingState: MutableState<Int>,
-    allTracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>,
-    speedState: State<Float>
-) = coroutineScope {
-    launch(Dispatchers.IO) {
-        RustLibs.replayCurTrackBlocking()
-
-        startPlaybackControlTasks(
-            currentTrackState,
-            isPlayingState,
-            isPlayingCoverLoadedState,
-            playbackPositionState,
-            loopingState,
-            allTracksState,
-            isPlaybackTrackDraggingState,
-            speedState
-        )
-    }
-}
-
-suspend fun onPlaybackCompletition(
-    currentTrackState: MutableState<Track?>,
-    isPlayingState: MutableState<Boolean>,
-    isPlayingCoverLoadedState: MutableState<Boolean>,
-    playbackPositionState: MutableState<Float>,
-    loopingState: MutableState<Int>,
-    allTracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>,
-    speedState: State<Float>
-) = coroutineScope {
-    when {
-        isPlaybackTrackDraggingState.value -> Unit
-
-        else -> when (loopingState.value) {
-            // Playlist looping
-            0 -> switchToNextTrack(
-                currentTrackState,
-                isPlayingState,
-                isPlayingCoverLoadedState,
-                playbackPositionState,
-                loopingState,
-                allTracksState,
-                isPlaybackTrackDraggingState,
-                speedState
-            )
-
-            // Track looping
-            1 -> replayCurrentTrack(
-                currentTrackState,
-                isPlayingState,
-                isPlayingCoverLoadedState,
-                playbackPositionState,
-                loopingState,
-                allTracksState,
-                isPlaybackTrackDraggingState,
-                speedState
-            )
-
-            // No looping
-            else -> launch(Dispatchers.IO) {
-                when {
-                    RustLibs.getCurTrackIndexBlocking() == allTracksState.size - 1 -> {
-                        isPlayingState.value = false
-
-                        launch(Dispatchers.IO) {
-                            playbackPositionState.value =
-                                RustLibs.getCurTrackBlocking()?.duration?.toFloat() ?: 0F
-                        }
-                    }
-
-                    else -> switchToNextTrack(
-                        currentTrackState,
-                        isPlayingState,
-                        isPlayingCoverLoadedState,
-                        playbackPositionState,
-                        loopingState,
-                        allTracksState,
-                        isPlaybackTrackDraggingState,
-                        speedState
-                    )
-                }
-            }
-        }
     }
 }

@@ -11,17 +11,24 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.paranid5.prima.data.Artist
+import com.paranid5.prima.di.KOIN_ALL_ARTISTS
+import com.paranid5.prima.di.KOIN_FILTERED_ALL_ARTISTS
 import com.paranid5.prima.domain.StorageHandler
+import com.paranid5.prima.domain.scanArtists
 import com.paranid5.prima.presentation.ui.SearchAppBar
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import org.koin.core.qualifier.named
 
 @Composable
 fun ArtistsAppBar(
-    allArtistsState: MutableState<List<Artist>>,
-    filteredAllArtistsState: MutableState<List<Artist>>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    allArtistsState: MutableStateFlow<List<Artist>> = koinInject(named(KOIN_ALL_ARTISTS)),
+    filteredAllArtistsState: MutableStateFlow<List<Artist>> = koinInject(named(KOIN_FILTERED_ALL_ARTISTS))
 ) {
+    val artists by allArtistsState.collectAsState()
     val isSearchingState = remember { mutableStateOf(false) }
 
     when {
@@ -33,15 +40,14 @@ fun ArtistsAppBar(
         ) { q ->
             val query = q.lowercase()
 
-            filteredAllArtistsState.value = allArtistsState.value.filter { artist ->
-                query in artist.name.lowercase()
+            filteredAllArtistsState.update {
+                artists.filter { artist -> query in artist.name.lowercase() }
             }
         }
 
         else -> DefaultAppBar(
-            isSearchingState,
-            allArtistsState,
-            filteredAllArtistsState
+            isSearchingState = isSearchingState,
+            modifier = modifier
         )
     }
 }
@@ -49,10 +55,8 @@ fun ArtistsAppBar(
 @Composable
 private fun DefaultAppBar(
     isSearchingState: MutableState<Boolean>,
-    artistsState: MutableState<List<Artist>>,
-    filteredArtistsState: MutableState<List<Artist>>,
     modifier: Modifier = Modifier,
-    storageHandler: StorageHandler = koinInject()
+    storageHandler: StorageHandler = koinInject(),
 ) {
     val primaryColor by storageHandler.primaryColorState.collectAsState()
 
@@ -79,11 +83,7 @@ private fun DefaultAppBar(
                         modifier = Modifier.align(Alignment.CenterVertically)
                     )
 
-                    ScannerButton(
-                        artistsState = artistsState,
-                        filteredArtistsState = filteredArtistsState,
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
+                    ScannerButton(Modifier.align(Alignment.CenterVertically))
                 }
             }
         }
@@ -130,14 +130,13 @@ private fun SearchButton(
 
 @Composable
 private fun ScannerButton(
-    artistsState: MutableState<List<Artist>>,
-    filteredArtistsState: MutableState<List<Artist>>,
     modifier: Modifier = Modifier,
-    storageHandler: StorageHandler = koinInject()
+    storageHandler: StorageHandler = koinInject(),
+    allArtistsState: MutableStateFlow<List<Artist>> = koinInject(named(KOIN_ALL_ARTISTS)),
+    filteredAllArtistsState: MutableStateFlow<List<Artist>> = koinInject(named(KOIN_FILTERED_ALL_ARTISTS))
 ) {
     val lang by storageHandler.languageState.collectAsState()
     val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
-
     val coroutineScope = rememberCoroutineScope()
 
     IconButton(
@@ -145,8 +144,8 @@ private fun ScannerButton(
         onClick = {
             coroutineScope.launch {
                 scanArtists(
-                    artistsState = artistsState,
-                    filteredArtistsState = filteredArtistsState,
+                    artistsState = allArtistsState,
+                    filteredArtistsState = filteredAllArtistsState,
                     lang = lang
                 )
             }

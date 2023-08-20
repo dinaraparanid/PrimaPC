@@ -7,9 +7,9 @@ import com.arkivanov.decompose.extensions.compose.jetbrains.stack.animation.fade
 import com.arkivanov.decompose.extensions.compose.jetbrains.stack.animation.stackAnimation
 import com.paranid5.prima.presentation.screens.artists.ArtistTracksScreen
 import com.paranid5.prima.presentation.screens.main_menu_fragments.artists.ArtistsScreen
-import com.paranid5.prima.presentation.screens.main_menu_fragments.favourites.FavouritesFragment
-import com.paranid5.prima.presentation.screens.main_menu_fragments.tracks.TracksFragment
-import com.paranid5.prima.presentation.screens.playbar_fragments.current_playlist.CurrentPlaylistFragment
+import com.paranid5.prima.presentation.screens.main_menu_fragments.favourites.FavouritesScreen
+import com.paranid5.prima.presentation.screens.main_menu_fragments.tracks.TracksScreen
+import com.paranid5.prima.presentation.screens.playbar_screens.current_playlist.CurrentPlaylistScreen
 import com.paranid5.prima.presentation.ui.navigation.composition_locals.LocalRootNavigator
 
 @Composable
@@ -22,9 +22,9 @@ fun RootScreen(modifier: Modifier = Modifier) {
         animation = stackAnimation(fade())
     ) {
         when (it.instance) {
-            Screen.MainMenuScreen.Tracks -> TracksFragment()
-            Screen.PlaybarScreen.CurrentPlaylist -> CurrentPlaylistFragment()
-            Screen.MainMenuScreen.Favourites -> FavouritesFragment()
+            Screen.MainMenuScreen.Tracks -> TracksScreen()
+            Screen.PlaybarScreen.CurrentPlaylist -> CurrentPlaylistScreen()
+            Screen.MainMenuScreen.Favourites -> FavouritesScreen()
             Screen.MainMenuScreen.Artists -> ArtistsScreen()
             Screen.ArtistTracks -> ArtistTracksScreen()
 

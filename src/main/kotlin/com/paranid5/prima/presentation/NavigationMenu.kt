@@ -18,7 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.paranid5.prima.domain.StorageHandler
-import com.paranid5.prima.presentation.ui.composition_locals.LocalNavigator
+import com.paranid5.prima.presentation.ui.navigation.composition_locals.LocalRootNavigator
 import org.koin.compose.koinInject
 
 @Composable
@@ -26,7 +26,7 @@ fun NavigationMenu(
     modifier: Modifier = Modifier,
     storageHandler: StorageHandler = koinInject()
 ) {
-    val navigator = LocalNavigator.current
+    val navigator = LocalRootNavigator.current
     val lang by storageHandler.languageState.collectAsState()
 
     NavigationRail(modifier = modifier.fillMaxHeight().width(IntrinsicSize.Max)) {

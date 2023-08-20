@@ -1,36 +1,32 @@
 package com.paranid5.prima.presentation.ui.tracks
 
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.paranid5.prima.data.Track
+import kotlinx.coroutines.flow.MutableStateFlow
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 inline fun TrackList(
-    tracksState: SnapshotStateList<Track>,
-    filteredTracksState: SnapshotStateList<Track>,
-    currentTrackState: MutableState<Track?>,
-    isPlayingState: MutableState<Boolean>,
-    isPlayingCoverLoadedState: MutableState<Boolean>,
-    playbackPositionState: MutableState<Float>,
-    loopingState: MutableState<Int>,
-    isPlaybackTrackDraggingState: State<Boolean>,
-    speedState: State<Float>,
-    isLikedState: MutableState<Boolean>,
-    trackBarCaller: @Composable (SnapshotStateList<Track>, SnapshotStateList<Track>, LazyListState) -> Unit
+    tracksState: MutableStateFlow<List<Track>>,
+    filteredTracksState: MutableStateFlow<List<Track>>,
+    modifier: Modifier = Modifier,
+    trackBar: TrackBarTemplate
 ) {
     val listState = rememberLazyListState()
+    val tracksOnScreen by filteredTracksState.collectAsState()
 
-    Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
-        trackBarCaller(tracksState, filteredTracksState, listState)
+    Column(modifier.fillMaxWidth().wrapContentHeight()) {
+        trackBar(tracksState, filteredTracksState, listState)
 
         LazyColumn(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
@@ -38,19 +34,14 @@ inline fun TrackList(
             verticalArrangement = Arrangement.spacedBy(15.dp),
             state = listState
         ) {
-            itemsIndexed(filteredTracksState, key = { _, track -> track }) { ind, _ ->
+            itemsIndexed(tracksOnScreen, key = { _, track -> track }) { ind, _ ->
                 TrackItem(
-                    filteredTracksState,
-                    ind,
-                    currentTrackState,
-                    isPlayingState,
-                    isPlayingCoverLoadedState,
-                    playbackPositionState,
-                    loopingState,
-                    tracksState,
-                    isPlaybackTrackDraggingState,
-                    speedState,
-                    isLikedState
+                    tracksOnScreen = tracksOnScreen,
+                    index = ind,
+                    allTracksState = tracksState,
+                    modifier = Modifier.animateItemPlacement(
+                        animationSpec = tween(durationMillis = 300)
+                    )
                 )
             }
         }

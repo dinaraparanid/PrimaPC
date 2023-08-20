@@ -11,16 +11,22 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.paranid5.prima.data.Artist
+import com.paranid5.prima.di.KOIN_FAVOURITE_ARTISTS
+import com.paranid5.prima.di.KOIN_FILTERED_FAVOURITE_ARTISTS
 import com.paranid5.prima.domain.StorageHandler
 import com.paranid5.prima.presentation.ui.SearchAppBar
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import org.koin.compose.koinInject
+import org.koin.core.qualifier.named
 
 @Composable
 fun FavouriteArtistsAppBar(
-    favouriteArtistsState: MutableState<List<Artist>>,
-    filteredFavouriteArtistsState: MutableState<List<Artist>>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    favouriteArtistsState: MutableStateFlow<List<Artist>> = koinInject(named(KOIN_FAVOURITE_ARTISTS)),
+    filteredFavouriteArtistsState: MutableStateFlow<List<Artist>> = koinInject(named(KOIN_FILTERED_FAVOURITE_ARTISTS)),
 ) {
+    val artists by favouriteArtistsState.collectAsState()
     val isSearchingState = remember { mutableStateOf(false) }
 
     when {
@@ -32,8 +38,8 @@ fun FavouriteArtistsAppBar(
         ) { q ->
             val query = q.lowercase()
 
-            filteredFavouriteArtistsState.value = favouriteArtistsState.value.filter { artist ->
-                query in artist.name.lowercase()
+            filteredFavouriteArtistsState.update {
+                artists.filter { artist -> query in artist.name.lowercase() }
             }
         }
 

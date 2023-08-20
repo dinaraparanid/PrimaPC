@@ -1,14 +1,10 @@
 package com.paranid5.prima.presentation.ui.tracks
 
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,224 +14,352 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.paranid5.prima.data.Track
-import com.paranid5.prima.rust.RustLibs
-import com.paranid5.prima.presentation.cancelPlaybackControlTasks
-import com.paranid5.prima.presentation.startPlaybackControlTasks
+import com.paranid5.prima.di.*
+import com.paranid5.prima.domain.StorageHandler
+import com.paranid5.prima.domain.cancelPlaybackControlTasks
 import com.paranid5.prima.domain.extensions.correctUTF8String
-import com.paranid5.prima.domain.localization.LocalizedString
+import com.paranid5.prima.domain.startPlaybackControlTasks
+import com.paranid5.prima.rust.RustLibs
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
+import org.jetbrains.skia.Image
+import org.koin.compose.koinInject
+import org.koin.core.qualifier.named
 import java.io.File
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
-fun LazyItemScope.TrackItem(
+fun TrackItem(
     tracksOnScreen: List<Track>,
     index: Int,
-    currentTrackState: MutableState<Track?>,
-    isPlayingState: MutableState<Boolean>,
-    isPlayingCoverLoadedState: MutableState<Boolean>,
-    playbackPositionState: MutableState<Float>,
-    loopingState: MutableState<Int>,
-    allTracksState: SnapshotStateList<Track>,
-    isPlaybackTrackDraggingState: State<Boolean>,
-    speedState: State<Float>,
-    isLikedState: MutableState<Boolean>
+    allTracksState: MutableStateFlow<List<Track>>,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject(),
+    selectedTrackState: MutableStateFlow<Track?> = koinInject(named(KOIN_SELECTED_TRACK)),
+    isPlayingState: MutableStateFlow<Boolean> = koinInject(named(KOIN_IS_PLAYING)),
+    isPlayingCoverLoadedState: MutableStateFlow<Boolean> = koinInject(named(KOIN_IS_PLAYING_COVER_LOADED)),
+    playbackPositionState: MutableStateFlow<Float> = koinInject(named(KOIN_PLAYBACK_POS)),
+    loopingState: MutableStateFlow<Int> = koinInject(named(KOIN_LOOPING)),
+    isPlaybackTrackDraggingState: MutableStateFlow<Boolean> = koinInject(named(KOIN_IS_PLAYBACK_TRACK_DRAGGING)),
+    speedState: MutableStateFlow<Float> = koinInject(named(KOIN_SPEED))
 ) {
-    val track = tracksOnScreen[index]
+    val primaryColor by storageHandler.primaryColorState.collectAsState()
+    val secondaryColor by storageHandler.secondaryColorState.collectAsState()
+    val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
+
     val coroutineScope = rememberCoroutineScope()
     val isCoverLoadedState = remember { mutableStateOf(false) }
     val coverState = remember { mutableStateOf(ImageBitmap(0, 0)) }
+    val track by remember { derivedStateOf { tracksOnScreen[index] } }
+    val isPopupMenuExpandedState = remember { mutableStateOf(false) }
 
-    val coverTask = coroutineScope.async(Dispatchers.IO) {
-        try {
-            AudioFileIO.read(File(track.path.correctUTF8String)).tagOrCreateAndSetDefault?.firstArtwork?.binaryData
-        } catch (e: Exception) {
-            null
+    val textColor by remember {
+        derivedStateOf {
+            when (track) {
+                selectedTrackState.value -> primaryColor
+                else -> secondaryAlternativeColor
+            }
         }
     }
 
-    coroutineScope.launch {
-        coverTask.await()?.toList()?.let {
-            coverState.value = withContext(Dispatchers.IO) {
-                org.jetbrains.skia.Image.makeFromEncoded(it.toByteArray()).toComposeImageBitmap()
-            }
+    LaunchedEffect(Unit) {
+        val cover = withContext(Dispatchers.IO) {
+            val coverBytes = AudioFileIO
+                .read(File(track.path.correctUTF8String))
+                .tagOrCreateAndSetDefault
+                ?.firstArtwork
+                ?.binaryData
+                ?: return@withContext null
 
-            isCoverLoadedState.value = true
+            Image.makeFromEncoded(coverBytes).toComposeImageBitmap()
         }
+
+        cover?.let { coverState.value = it }
+        isCoverLoadedState.value = true
     }
 
     Card(
-        backgroundColor = Params.primaryColor,
+        backgroundColor = primaryColor,
         elevation = 15.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateItemPlacement(animationSpec = tween(durationMillis = 300)),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Button(
             onClick = {
-                if (currentTrackState.value != track) {
-                    currentTrackState.value = track
-                    isPlayingState.value = true
-                    playbackPositionState.value = 0F
-                    isPlayingCoverLoadedState.value = false
-                } else {
-                    isPlayingState.value = !isPlayingState.value
-                }
-
-                coroutineScope.launch(Dispatchers.IO) {
-                    RustLibs.onTrackClickedBlocking(tracksOnScreen, index)
-
-                    when {
-                        isPlayingState.value -> coroutineScope.launch {
-                            startPlaybackControlTasks(
-                                currentTrackState,
-                                isPlayingState,
-                                isPlayingCoverLoadedState,
-                                playbackPositionState,
-                                loopingState,
-                                allTracksState,
-                                isPlaybackTrackDraggingState,
-                                speedState
-                            )
-                        }
-
-                        else -> cancelPlaybackControlTasks()
-                    }
-                }
+                onTrackClicked(
+                    clickedTrack = track,
+                    tracksOnScreen = tracksOnScreen,
+                    index = index,
+                    selectedTrackState = selectedTrackState,
+                    isPlayingState = isPlayingState,
+                    isPlayingCoverLoadedState = isPlayingCoverLoadedState,
+                    playbackPositionState = playbackPositionState,
+                    loopingState = loopingState,
+                    currentPlaylistTracksState = allTracksState,
+                    isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
+                    speedState = speedState,
+                    coroutineScope
+                )
             },
             modifier = Modifier.fillMaxSize().padding(3.dp),
-            colors = ButtonDefaults.buttonColors(backgroundColor = Params.secondaryColor),
+            colors = ButtonDefaults.buttonColors(backgroundColor = secondaryColor),
         ) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                if (isCoverLoadedState.value) Image(
-                    bitmap = coverState.value,
-                    contentDescription = Localization.trackCover.resource,
-                    filterQuality = FilterQuality.High,
+            Row(Modifier.fillMaxWidth()) {
+                TrackCover(
+                    isCoverLoaded = isCoverLoadedState.value,
+                    cover = coverState.value,
                     modifier = Modifier
-                        .height(50.dp)
-                        .width(50.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .align(Alignment.CenterVertically),
-                )
-                else Image(
-                    painter = painterResource("images/default_cover.png"),
-                    contentDescription = Localization.trackCover.resource,
-                    modifier = Modifier
-                        .height(50.dp)
-                        .width(50.dp)
+                        .size(50.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .align(Alignment.CenterVertically),
                 )
 
                 Spacer(Modifier.width(20.dp).fillMaxHeight())
 
-                val textColor = when (track) {
-                    currentTrackState.value -> Params.primaryColor
-                    else -> Params.secondaryAlternativeColor
-                }
-
-                Column(modifier = Modifier.weight(1F).align(Alignment.CenterVertically)) {
-                    Text(
-                        text = track.title?.takeIf(String::isNotEmpty) ?: Localization.unknownTrack.resource,
-                        fontSize = 18.sp,
-                        color = textColor
-                    )
-
-                    Text(
-                        text = "${
-                            track.artist?.takeIf(String::isNotEmpty) ?: Localization.unknownArtist.resource
-                        } / ${
-                            track.album?.takeIf(String::isNotEmpty) ?: Localization.unknownAlbum.resource
-                        }",
-                        fontSize = 14.sp,
-                        color = textColor
-                    )
-                }
+                TrackInfoLabels(
+                    track = track,
+                    textColor = textColor,
+                    modifier = Modifier
+                        .weight(1F)
+                        .align(Alignment.CenterVertically)
+                )
 
                 Spacer(Modifier.width(20.dp).fillMaxHeight())
 
-                val isPopupMenuExpandedState = remember { mutableStateOf(false) }
-
-                Button(
-                    onClick = { isPopupMenuExpandedState.value = true },
+                TrackSettingsButton(
+                    track = track,
+                    isPopupMenuExpandedState = isPopupMenuExpandedState,
                     modifier = Modifier
                         .width(50.dp)
                         .fillMaxHeight()
-                        .align(Alignment.CenterVertically),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
-                    elevation = null
-                ) {
-                    Image(
-                        painter = painterResource("images/three_dots.png"),
-                        contentDescription = Localization.trackCover.resource,
-                        modifier = Modifier.fillMaxSize(),
-                        colorFilter = ColorFilter.tint(Params.primaryColor),
-                        contentScale = ContentScale.Inside
-                    )
-
-                    TrackSettingsMenu(
-                        track,
-                        currentTrackState,
-                        isLikedState,
-                        isPopupMenuExpandedState
-                    )
-                }
+                        .align(Alignment.CenterVertically)
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun TrackCover(
+    isCoverLoaded: Boolean,
+    cover: ImageBitmap,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
+) {
+    val lang by storageHandler.languageState.collectAsState()
+
+    when {
+        isCoverLoaded -> Image(
+            bitmap = cover,
+            contentDescription = lang.trackCover,
+            filterQuality = FilterQuality.High,
+            modifier = modifier
+        )
+
+        else -> Image(
+            painter = painterResource("images/default_cover.png"),
+            contentDescription = lang.trackCover,
+            modifier = modifier
+        )
+    }
+}
+
+@Composable
+private fun TrackInfoLabels(
+    track: Track,
+    textColor: Color,
+    modifier: Modifier = Modifier
+) = Column(modifier) {
+    TrackTitleLabel(trackTitle = track.title, textColor = textColor)
+
+    TrackArtistAlbumLabel(
+        trackArtist = track.artist,
+        trackAlbum = track.album,
+        textColor = textColor
+    )
+}
+
+@Composable
+private fun TrackTitleLabel(
+    trackTitle: String?,
+    textColor: Color,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
+) {
+    val lang by storageHandler.languageState.collectAsState()
+
+    Text(
+        text = trackTitle?.takeIf(String::isNotEmpty) ?: lang.unknownTrack,
+        fontSize = 18.sp,
+        color = textColor,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun TrackArtistAlbumLabel(
+    trackArtist: String?,
+    trackAlbum: String?,
+    textColor: Color,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
+) {
+    val lang by storageHandler.languageState.collectAsState()
+
+    Text(
+        text = "${
+            trackArtist?.takeIf(String::isNotEmpty) ?: lang.unknownArtist
+        } / ${
+            trackAlbum?.takeIf(String::isNotEmpty) ?: lang.unknownAlbum
+        }",
+        fontSize = 14.sp,
+        color = textColor,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun TrackSettingsButton(
+    track: Track,
+    isPopupMenuExpandedState: MutableState<Boolean>,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject(),
+) {
+    val lang by storageHandler.languageState.collectAsState()
+    val primaryColor by storageHandler.primaryColorState.collectAsState()
+
+    Button(
+        onClick = { isPopupMenuExpandedState.value = true },
+        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
+        elevation = null,
+        modifier = modifier,
+    ) {
+        Image(
+            painter = painterResource("images/three_dots.png"),
+            contentDescription = lang.trackCover,
+            modifier = Modifier.fillMaxSize(),
+            colorFilter = ColorFilter.tint(primaryColor),
+            contentScale = ContentScale.Inside
+        )
+
+        TrackSettingsMenu(
+            track = track,
+            isPopupMenuExpandedState = isPopupMenuExpandedState
+        )
     }
 }
 
 @Composable
 private fun TrackSettingsMenu(
     track: Track,
-    curTrackState: State<Track?>,
-    isLikedState: MutableState<Boolean>,
-    isPopupMenuExpandedState: MutableState<Boolean>
-) = DropdownMenu(
-    expanded = isPopupMenuExpandedState.value,
-    onDismissRequest = { isPopupMenuExpandedState.value = false }
+    isPopupMenuExpandedState: MutableState<Boolean>,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject(),
+    selectedTrackState: MutableStateFlow<Track?> = koinInject(named(KOIN_SELECTED_TRACK)),
+    isLikedState: MutableStateFlow<Boolean> = koinInject(named(KOIN_IS_LIKED)),
 ) {
+    val lang by storageHandler.languageState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
-    TrackSettingsMenuItem(title = Localization.changeTrackInfo) {
-        // TODO: Change track's info
-    }
+    DropdownMenu(
+        expanded = isPopupMenuExpandedState.value,
+        onDismissRequest = { isPopupMenuExpandedState.value = false },
+        modifier = modifier
+    ) {
+        TrackSettingsMenuItem(title = lang.changeTrackInfo) {
+            // TODO: Change track's info
+        }
 
-    TrackSettingsMenuItem(title = Localization.addToQueue) {
-        // TODO: Add track to queue
-    }
+        TrackSettingsMenuItem(title = lang.addToQueue) {
+            // TODO: Add track to queue
+        }
 
-    TrackSettingsMenuItem(title = Localization.addToFavourites) {
-        coroutineScope.launch(Dispatchers.IO) { RustLibs.onLikeTrackClicked(track) }
-        if (track == curTrackState.value) isLikedState.value = !isLikedState.value
-    }
+        TrackSettingsMenuItem(title = lang.addToFavourites) {
+            coroutineScope.launch(Dispatchers.IO) { RustLibs.onLikeTrackClicked(track) }
+            if (track == selectedTrackState.value) isLikedState.value = !isLikedState.value
+        }
 
-    TrackSettingsMenuItem(title = Localization.removeTrack) {
-        // TODO: Remove track
-    }
+        TrackSettingsMenuItem(title = lang.removeTrack) {
+            // TODO: Remove track
+        }
 
-    TrackSettingsMenuItem(title = Localization.lyrics) {
-        // TODO: Show lyrics
-    }
+        TrackSettingsMenuItem(title = lang.lyrics) {
+            // TODO: Show lyrics
+        }
 
-    TrackSettingsMenuItem(title = Localization.trackInformation) {
-        // TODO: Show track's information
-    }
+        TrackSettingsMenuItem(title = lang.trackInfo) {
+            // TODO: Show track's information
+        }
 
-    TrackSettingsMenuItem(title = Localization.trimTrack) {
-        // TODO: trim track
-    }
+        TrackSettingsMenuItem(title = lang.trimTrack) {
+            // TODO: trim track
+        }
 
-    TrackSettingsMenuItem(title = Localization.hideTrack) {
-        // TODO: hide track
+        TrackSettingsMenuItem(title = lang.hideTrack) {
+            // TODO: hide track
+        }
     }
 }
 
 @Composable
-private fun TrackSettingsMenuItem(title: LocalizedString, onClick: () -> Unit) = DropdownMenuItem(onClick) {
-    Text(text = title.resource, fontSize = 14.sp, color = Params.secondaryAlternativeColor)
+private fun TrackSettingsMenuItem(
+    title: String,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject(),
+    onClick: () -> Unit
+) {
+    val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
+
+    DropdownMenuItem(modifier = modifier, onClick = onClick) {
+        Text(text = title, fontSize = 14.sp, color = secondaryAlternativeColor)
+    }
+}
+
+private fun onTrackClicked(
+    clickedTrack: Track,
+    tracksOnScreen: List<Track>,
+    index: Int,
+    selectedTrackState: MutableStateFlow<Track?>,
+    isPlayingState: MutableStateFlow<Boolean>,
+    isPlayingCoverLoadedState: MutableStateFlow<Boolean>,
+    playbackPositionState: MutableStateFlow<Float>,
+    loopingState: MutableStateFlow<Int>,
+    currentPlaylistTracksState: MutableStateFlow<List<Track>>,
+    isPlaybackTrackDraggingState: MutableStateFlow<Boolean>,
+    speedState: MutableStateFlow<Float>,
+    coroutineScope: CoroutineScope
+) {
+    when (selectedTrackState.value) {
+        clickedTrack -> isPlayingState.value = !isPlayingState.value
+
+        else -> {
+            selectedTrackState.value = clickedTrack
+            isPlayingState.value = true
+            playbackPositionState.value = 0F
+            isPlayingCoverLoadedState.value = false
+        }
+    }
+
+    coroutineScope.launch(Dispatchers.IO) {
+        RustLibs.onTrackClickedBlocking(tracksOnScreen, index)
+
+        when {
+            isPlayingState.value -> coroutineScope.launch {
+                startPlaybackControlTasks(
+                    selectedTrackState = selectedTrackState,
+                    isPlayingState = isPlayingState,
+                    isPlayingCoverLoadedState = isPlayingCoverLoadedState,
+                    playbackPositionState = playbackPositionState,
+                    loopingState = loopingState,
+                    currentPlaylistTracksState = currentPlaylistTracksState,
+                    isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
+                    speedState = speedState
+                )
+            }
+
+            else -> cancelPlaybackControlTasks()
+        }
+    }
 }

@@ -10,7 +10,6 @@ pub mod domain;
 mod tests;
 
 use diesel::prelude::*;
-use futures::executor::block_on;
 
 use std::{cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc, sync::Arc, time::Duration};
 
@@ -71,26 +70,27 @@ static TOKIO_RUNTIME: Lazy<TokioRuntime> = Lazy::new(|| {
     )
 });
 
-static mut AUDIO_PLAYER: Lazy<Option<ARWLPlayer>> = Lazy::new(|| None);
+static mut AUDIO_PLAYER: Option<ARWLPlayer> = None; // TODO: Change to sync primitive
 
 #[inline]
 fn atomic_audio_player() -> ARWLPlayer {
+    println!("Get atomic audio player");
     unsafe { AUDIO_PLAYER.clone().unwrap() }
 }
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_initRust(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_initRust(
     _env: JNIEnv,
     _class: JClass,
 ) {
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         let mut player = Arc::new(RwLock::new(
             AudioPlayer::new(PlaybackParams::default().await).await,
         ));
 
         unsafe {
-            AUDIO_PLAYER.as_mut().replace(&mut player);
+            let _ = AUDIO_PLAYER.as_mut().insert(&mut player);
         }
     });
 
@@ -129,7 +129,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_initRust(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_hello(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_hello(
     mut env: JNIEnv,
     _class: jclass,
     name: JString,
@@ -148,14 +148,14 @@ fn ajvm(env: &JNIEnv) -> AJVM {
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracksBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getAllTracksBlocking(
     env: JNIEnv,
     _class: JClass,
 ) -> jobjectArray {
     let env = Rc::new(RefCell::new(env));
     let jvm = { ajvm(&*env.borrow()) };
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         AudioScanner::get_all_tracks(jvm, TOKIO_RUNTIME.clone())
             .await
             .lock()
@@ -168,14 +168,14 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllTracksBl
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrackBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getCurTrackBlocking(
     env: JNIEnv,
     _class: JClass,
 ) -> jobject {
     let env = Rc::new(RefCell::new(env));
     let jvm = { ajvm(&*env.borrow()) };
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         let playlist = StorageUtil::load_current_playlist(jvm).await;
         let cur_track = playlist.get_cur_track();
 
@@ -198,7 +198,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrackBlo
 /// jintArray[hh, mm, ss]
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_calcTrackTime(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_calcTrackTime(
     env: JNIEnv,
     _class: JClass,
     mut millis: jint,
@@ -342,7 +342,7 @@ async fn store_and_play_playlist(jvm: AJVM, playlist: Option<DefaultPlaylist<Def
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrackClickedBlocking(
+pub unsafe extern "system" fn Java_com_paranid5_prima_rust_RustLibs_onTrackClickedBlocking(
     env: JNIEnv,
     _class: JClass,
     tracks: JObject,
@@ -362,7 +362,7 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrack
         track_index as usize,
     );
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         StorageUtil::store_current_playlist(playlist.clone())
             .await
             .unwrap_or_default();
@@ -373,13 +373,13 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onTrack
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPlayButtonClickedBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_onPlayButtonClickedBlocking(
     env: JNIEnv,
     _class: JClass,
 ) {
     let jvm = ajvm(&env);
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         if has_cur_track(jvm.clone()).await {
             play_pause_cur_track(jvm, None).await
         }
@@ -388,13 +388,13 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPlayButtonCl
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onNextTrackClickedBlocking(
+pub unsafe extern "system" fn Java_com_paranid5_prima_rust_RustLibs_onNextTrackClickedBlocking(
     env: JNIEnv,
     _class: JClass,
 ) {
     let jvm = ajvm(&env);
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         let mut playlist = StorageUtil::load_current_playlist(jvm.clone()).await;
         let cur_track = playlist.get_cur_track();
 
@@ -426,13 +426,13 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onNextT
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPreviousTrackClickedBlocking(
+pub unsafe extern "system" fn Java_com_paranid5_prima_rust_RustLibs_onPreviousTrackClickedBlocking(
     env: JNIEnv,
     _class: JClass,
 ) {
     let jvm = ajvm(&env);
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         let mut playlist = StorageUtil::load_current_playlist(jvm.clone()).await;
         let cur_track = playlist.get_cur_track();
 
@@ -464,33 +464,35 @@ pub unsafe extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onPrevi
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurTrackIndexBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getCurTrackIndexBlocking(
     env: JNIEnv,
     _class: JClass,
 ) -> jsize {
     let jvm = ajvm(&env);
-    block_on(async move { StorageUtil::load_current_playlist(jvm).await.get_cur_ind() as jsize })
+    TOKIO_RUNTIME.block_on(async move {
+        StorageUtil::load_current_playlist(jvm).await.get_cur_ind() as jsize
+    })
 }
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getPlaybackPositionBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getPlaybackPositionBlocking(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    block_on(async { StorageUtil::load_current_playback_position().await as jlong })
+    TOKIO_RUNTIME.block_on(async { StorageUtil::load_current_playback_position().await as jlong })
 }
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_seekToBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_seekToBlocking(
     env: JNIEnv,
     _class: JClass,
     millis: jlong,
 ) {
     let jvm = ajvm(&env);
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         let playlist = StorageUtil::load_current_playlist(jvm.clone()).await;
         let cur_track = playlist.get_cur_track();
 
@@ -509,24 +511,24 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_seekToBlocking
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isPlaying(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_isPlaying(
     _env: JNIEnv,
     _class: JClass,
 ) -> jboolean {
-    jboolean::from(block_on(async {
-        atomic_audio_player().read().await.is_playing()
-    }))
+    jboolean::from(
+        TOKIO_RUNTIME.block_on(async { atomic_audio_player().read().await.is_playing() }),
+    )
 }
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_replayCurTrackBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_replayCurTrackBlocking(
     env: JNIEnv,
     _class: JClass,
 ) {
     let jvm = ajvm(&env);
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         let (path, duration) = get_path_and_duration_of_cur_track(jvm.clone()).await;
 
         AudioPlayer::play(
@@ -542,11 +544,11 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_replayCurTrack
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setNextLoopingStateBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_setNextLoopingStateBlocking(
     _env: JNIEnv,
     _class: JClass,
 ) -> jint {
-    block_on(async {
+    TOKIO_RUNTIME.block_on(async {
         let audio_player = atomic_audio_player();
         AudioPlayer::set_next_looping_state(audio_player.clone()).await;
         let state = audio_player.read().await.get_looping_state();
@@ -561,12 +563,12 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setNextLooping
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setVolumeBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_setVolumeBlocking(
     _env: JNIEnv,
     _class: JClass,
     volume: jfloat,
 ) {
-    block_on(async {
+    TOKIO_RUNTIME.block_on(async {
         StorageUtil::store_volume(volume).await.unwrap_or_default();
         AudioPlayer::set_volume(atomic_audio_player(), volume as f32).await
     })
@@ -574,12 +576,12 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setVolumeBlock
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setSpeedBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_setSpeedBlocking(
     _env: JNIEnv,
     _class: JClass,
     speed: jfloat,
 ) {
-    block_on(async {
+    TOKIO_RUNTIME.block_on(async {
         StorageUtil::store_speed(speed).await.unwrap_or_default();
         AudioPlayer::set_speed(atomic_audio_player(), speed as f32).await
     })
@@ -587,29 +589,29 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setSpeedBlocki
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getVolumeBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getVolumeBlocking(
     _env: JNIEnv,
     _class: JClass,
 ) -> jfloat {
-    block_on(async { atomic_audio_player().write().await.get_volume() as jfloat })
+    TOKIO_RUNTIME.block_on(async { atomic_audio_player().write().await.get_volume() as jfloat })
 }
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getSpeedBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getSpeedBlocking(
     _env: JNIEnv,
     _class: JClass,
 ) -> jfloat {
-    block_on(async { atomic_audio_player().write().await.get_speed() as jfloat })
+    TOKIO_RUNTIME.block_on(async { atomic_audio_player().write().await.get_speed() as jfloat })
 }
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getLoopingStateBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getLoopingStateBlocking(
     _env: JNIEnv,
     _class: JClass,
 ) -> jint {
-    block_on(async {
+    TOKIO_RUNTIME.block_on(async {
         atomic_audio_player()
             .write()
             .await
@@ -620,11 +622,11 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getLoopingStat
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getTrackOrderBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getTrackOrderBlocking(
     env: JNIEnv,
     _class: JClass,
 ) -> jintArray {
-    let ord = block_on(async {
+    let ord = TOKIO_RUNTIME.block_on(async {
         let order = StorageUtil::load_track_order().await;
         (order.comparator, order.order)
     });
@@ -640,7 +642,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getTrackOrderB
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setTrackOrderBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_setTrackOrderBlocking(
     _env: JNIEnv,
     _class: JClass,
     comparator: jint,
@@ -648,7 +650,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setTrackOrderB
 ) {
     let order = TrackOrder::new(Comparator::from(comparator), Ord::from(order - 5));
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         StorageUtil::store_track_order(order)
             .await
             .unwrap_or_default()
@@ -657,14 +659,14 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setTrackOrderB
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setMusicSearchPathBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_setMusicSearchPathBlocking(
     mut env: JNIEnv,
     _class: JClass,
     path: JString,
 ) {
     let path = unsafe { String::from_jstring_unchecked(&mut env, &path) };
 
-    block_on(async {
+    TOKIO_RUNTIME.block_on(async {
         StorageUtil::store_music_search_path(PathBuf::from(path))
             .await
             .unwrap_or_default()
@@ -673,11 +675,11 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_setMusicSearch
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_storeCurPlaybackPosBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_storeCurPlaybackPosBlocking(
     _env: JNIEnv,
     _class: JClass,
 ) {
-    block_on(async {
+    TOKIO_RUNTIME.block_on(async {
         AudioPlayer::save_cur_playback_pos_async(
             atomic_audio_player().clone(),
             TOKIO_RUNTIME.clone(),
@@ -690,7 +692,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_storeCurPlayba
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onLikeTrackClicked(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_onLikeTrackClicked(
     env: JNIEnv,
     _class: JClass,
     track: JObject,
@@ -708,7 +710,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onLikeTrackCli
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isTrackLiked(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_isTrackLiked(
     env: JNIEnv,
     _class: JClass,
     track: JObject,
@@ -724,14 +726,14 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isTrackLiked(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurPlaylistBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getCurPlaylistBlocking(
     env: JNIEnv,
     _class: JClass,
 ) -> jobjectArray {
     let env = Rc::new(RefCell::new(env));
     let jvm = { ajvm(&*env.borrow()) };
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         StorageUtil::load_current_playlist(jvm)
             .await
             .into_jobject_array(env)
@@ -741,7 +743,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getCurPlaylist
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_updateAndStoreCurPlaylistBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_updateAndStoreCurPlaylistBlocking(
     env: JNIEnv,
     _class: JClass,
     cur_playlist: JObject,
@@ -755,7 +757,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_updateAndStore
             DefaultTrack::from_env(env, jtrack)
         });
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         let playlist = StorageUtil::load_current_playlist(jvm).await;
         let cur_track = playlist.get_cur_track().unwrap();
 
@@ -777,7 +779,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_updateAndStore
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getFavouriteTracks(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getFavouriteTracks(
     env: JNIEnv,
     _class: JClass,
 ) -> jobjectArray {
@@ -805,7 +807,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getFavouriteTr
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_artistImageBind(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_artistImageBind(
     mut env: JNIEnv,
     _class: JClass,
     name: JString,
@@ -827,7 +829,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_artistImageBin
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onLikeArtistClicked(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_onLikeArtistClicked(
     mut env: JNIEnv,
     _class: JClass,
     artist: JString,
@@ -844,7 +846,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onLikeArtistCl
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isArtistLiked(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_isArtistLiked(
     mut env: JNIEnv,
     _class: JClass,
     artist: JString,
@@ -858,7 +860,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isArtistLiked(
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getFavouriteArtists(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getFavouriteArtists(
     mut env: JNIEnv,
     _class: JClass,
 ) -> jobjectArray {
@@ -883,14 +885,14 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getFavouriteAr
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllArtistsBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getAllArtistsBlocking(
     mut env: JNIEnv,
     _class: JClass,
     placeholder: JString,
 ) -> jobjectArray {
     let jvm = Arc::new(env.get_java_vm().unwrap());
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         let tracks = AudioScanner::get_all_tracks(jvm, TOKIO_RUNTIME.clone()).await;
         let tracks = tracks.lock().await;
 
@@ -928,7 +930,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getAllArtistsB
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getArtistTracksBlocking(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getArtistTracksBlocking(
     mut env: JNIEnv,
     _class: JClass,
     artist: JString,
@@ -936,7 +938,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getArtistTrack
     let jvm = Arc::new(env.get_java_vm().unwrap());
     let artist = unsafe { String::from_jstring_unchecked(&mut env, &artist) };
 
-    block_on(async move {
+    TOKIO_RUNTIME.block_on(async move {
         AudioScanner::get_all_tracks(jvm, TOKIO_RUNTIME.clone())
             .await
             .lock()
@@ -953,7 +955,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_getArtistTrack
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onLikePlaylistClicked(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_onLikePlaylistClicked(
     mut env: JNIEnv,
     _class: JClass,
     id: JObject,
@@ -992,7 +994,7 @@ pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_onLikePlaylist
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "system" fn Java_com_dinaraparanid_prima_rust_RustLibs_isPlaylistLiked(
+pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_isPlaylistLiked(
     mut env: JNIEnv,
     _class: JClass,
     id: JObject,

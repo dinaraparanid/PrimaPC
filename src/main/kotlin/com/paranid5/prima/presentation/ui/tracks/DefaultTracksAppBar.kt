@@ -14,13 +14,14 @@ import com.paranid5.prima.data.Track
 import com.paranid5.prima.data.TrackSearchOrder
 import com.paranid5.prima.domain.StorageHandler
 import com.paranid5.prima.presentation.ui.SearchAppBar
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.koin.compose.koinInject
 
 @Composable
 fun DefaultTracksAppBar(
     mainLabel: String,
-    tracksState: MutableState<List<Track>>,
-    filteredTracksState: MutableState<List<Track>>,
+    tracksState: MutableStateFlow<List<Track>>,
+    filteredTracksState: MutableStateFlow<List<Track>>,
     modifier: Modifier = Modifier,
     storageHandler: StorageHandler = koinInject()
 ) {

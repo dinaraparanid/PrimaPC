@@ -46,7 +46,7 @@ sealed interface Language {
     data object English : Language {
         override val data by lazy {
             Yaml.default.decodeFromStream<Map<String, String>>(
-                File("/src/main/resources/lang/ru.yaml").inputStream()
+                File("/home/paranid5/PROGRAMMING/Kotlin/PrimaPC/src/main/resources/lang/ru.yaml").inputStream()
             )
         }
     }
@@ -54,7 +54,7 @@ sealed interface Language {
     data object Russian : Language {
         override val data by lazy {
             Yaml.default.decodeFromStream<Map<String, String>>(
-                File("/src/main/resources/lang/ru.yaml").inputStream()
+                File("/home/paranid5/PROGRAMMING/Kotlin/PrimaPC/src/main/resources/lang/ru.yaml").inputStream()
             )
         }
     }

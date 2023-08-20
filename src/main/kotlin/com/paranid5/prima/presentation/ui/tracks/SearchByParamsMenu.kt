@@ -1,47 +1,61 @@
 package com.paranid5.prima.presentation.ui.tracks
 
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.sp
-import com.paranid5.prima.domain.localization.LocalizedString
+import com.paranid5.prima.data.TrackSearchOrder
+import com.paranid5.prima.domain.StorageHandler
+import org.koin.compose.koinInject
 
 @Composable
-fun SearchByParamsMenu(isPopupMenuExpandedState: MutableState<Boolean>) = DropdownMenu(
-    expanded = isPopupMenuExpandedState.value,
-    onDismissRequest = { isPopupMenuExpandedState.value = false }
+fun SearchByParamsMenu(
+    isPopupMenuExpandedState: MutableState<Boolean>,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
 ) {
-    SearchByParamsMenuItem(Params.TrackSearchOrder.TITLE, Localization.byTitle)
-    SearchByParamsMenuItem(Params.TrackSearchOrder.ARTIST, Localization.byArtist)
-    SearchByParamsMenuItem(Params.TrackSearchOrder.ALBUM, Localization.byAlbum)
+    val lang by storageHandler.languageState.collectAsState()
+
+    DropdownMenu(
+        modifier = modifier,
+        expanded = isPopupMenuExpandedState.value,
+        onDismissRequest = { isPopupMenuExpandedState.value = false }
+    ) {
+        SearchByParamsMenuItem(TrackSearchOrder.TITLE, lang.byTitle)
+        SearchByParamsMenuItem(TrackSearchOrder.ARTIST, lang.byArtist)
+        SearchByParamsMenuItem(TrackSearchOrder.ALBUM, lang.byAlbum)
+    }
 }
 
 @Composable
-private fun SearchByParamsMenuItem(order: Params.TrackSearchOrder, title: LocalizedString) {
-    val isCheckedState = remember { mutableStateOf(order in Params.trackSearchOrders) }
+private fun SearchByParamsMenuItem(
+    order: TrackSearchOrder,
+    title: String,
+    modifier: Modifier = Modifier,
+    storageHandler: StorageHandler = koinInject()
+) {
+    val primaryColor by storageHandler.primaryColorState.collectAsState()
+    val secondaryColor by storageHandler.secondaryColorState.collectAsState()
+    val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
+
+    val trackSearchOrder by storageHandler.trackSearchOrderState.collectAsState()
+    val isChecked by remember { derivedStateOf { order in trackSearchOrder } }
 
     DropdownMenuItem(
-        onClick = {
-            Params.updateTrackSearchOrder(order)
-            isCheckedState.value = !isCheckedState.value
-        }
+        modifier = modifier,
+        onClick = { storageHandler.storeTrackSearchOrder(order) }
     ) {
         Checkbox(
-            checked = isCheckedState.value,
-            onCheckedChange = {
-                Params.updateTrackSearchOrder(order)
-                isCheckedState.value = !isCheckedState.value
-            },
+            checked = isChecked,
+            onCheckedChange = { storageHandler.storeTrackSearchOrder(order) },
             colors = CheckboxDefaults.colors(
-                checkedColor = Params.primaryColor,
-                checkmarkColor = Params.secondaryColor,
-                uncheckedColor = Params.secondaryAlternativeColor,
-                disabledColor = Params.secondaryAlternativeColor
+                checkedColor = primaryColor,
+                checkmarkColor = secondaryColor,
+                uncheckedColor = secondaryAlternativeColor,
+                disabledColor = secondaryAlternativeColor
             )
         )
 
-        Text(text = title.resource, fontSize = 14.sp, color = Params.secondaryAlternativeColor)
+        Text(text = title, fontSize = 14.sp, color = secondaryAlternativeColor)
     }
 }

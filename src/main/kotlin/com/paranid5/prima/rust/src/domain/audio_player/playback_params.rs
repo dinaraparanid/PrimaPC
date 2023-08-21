@@ -1,7 +1,7 @@
 extern crate atomic_float;
 extern crate jni;
 
-use crate::{get_in_borders, StorageUtil};
+use crate::{get_in_borders, ARWLStorage};
 use atomic_float::AtomicF32;
 use jni::sys::jint;
 
@@ -34,13 +34,15 @@ pub enum LoopingState {
 
 impl PlaybackParams {
     #[inline]
-    pub async fn default() -> Self {
+    pub async fn default(storage_util: ARWLStorage) -> Self {
+        let storage_util = storage_util.read().await;
+
         Self {
-            volume: StorageUtil::load_volume().await,
-            speed: Arc::new(AtomicF32::new(StorageUtil::load_speed().await)),
+            volume: storage_util.load_volume(),
+            speed: Arc::new(AtomicF32::new(storage_util.load_speed())),
             reverb: ReverbParams::default(),
             fade_in: Duration::default(),
-            looping_state: StorageUtil::load_looping_state().await,
+            looping_state: storage_util.load_looping_state(),
         }
     }
 

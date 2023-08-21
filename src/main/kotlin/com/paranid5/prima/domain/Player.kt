@@ -21,24 +21,22 @@ suspend fun startPlaybackControlTasks(
 ): Unit = coroutineScope {
     playbackControlTasksState.update {
         launch(Dispatchers.Default) {
-            while (true) {
-                runCalculationOfSliderPos(
-                    isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
-                    playbackPositionState = playbackPositionState,
-                )
+            runCalculationOfSliderPos(
+                isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
+                playbackPositionState = playbackPositionState,
+            )
 
-                if (RustLibs.getPlaybackPositionBlocking() == selectedTrackState.value?.duration)
-                    onPlaybackCompletition(
-                        selectedTrackState = selectedTrackState,
-                        isPlayingState = isPlayingState,
-                        isPlayingCoverLoadedState = isPlayingCoverLoadedState,
-                        playbackPositionState = playbackPositionState,
-                        loopingState = loopingState,
-                        currentPlaylistTracksState = currentPlaylistTracksState,
-                        isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
-                        speedState = speedState
-                    )
-            }
+            if (RustLibs.getPlaybackPositionBlocking() == selectedTrackState.value?.duration)
+                onPlaybackCompletition(
+                    selectedTrackState = selectedTrackState,
+                    isPlayingState = isPlayingState,
+                    isPlayingCoverLoadedState = isPlayingCoverLoadedState,
+                    playbackPositionState = playbackPositionState,
+                    loopingState = loopingState,
+                    currentPlaylistTracksState = currentPlaylistTracksState,
+                    isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
+                    speedState = speedState
+                )
         }
     }
 }
@@ -53,11 +51,15 @@ private suspend inline fun runCalculationOfSliderPos(
     isPlaybackTrackDraggingState: StateFlow<Boolean>,
     playbackPositionState: MutableStateFlow<Float>,
 ) {
+    println("Start slider pos calc")
+
     while (RustLibs.isPlaying() && !isPlaybackTrackDraggingState.value) {
         val duration = RustLibs.getPlaybackPositionBlocking().toFloat()
         playbackPositionState.update { duration }
         delay(50)
     }
+
+    println("Stop slider pos calc")
 }
 
 suspend fun switchToNextTrack(

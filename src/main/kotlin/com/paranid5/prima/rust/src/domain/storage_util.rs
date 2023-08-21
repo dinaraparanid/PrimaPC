@@ -7,7 +7,8 @@ use std::{
 };
 
 use crate::{
-    data::utils::extensions::path_buf_ext::PathBufExt, DefaultPlaylist, DefaultTrack, TrackOrder,
+    data::utils::extensions::path_buf_ext::PathBufExt,
+    domain::audio_player::playback_params::LoopingState, DefaultPlaylist, DefaultTrack, TrackOrder,
     AJVM,
 };
 
@@ -18,12 +19,40 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
 };
 
-use crate::domain::audio_player::playback_params::LoopingState;
 use yaml_rust::{yaml::Hash, Yaml, YamlEmitter, YamlLoader};
 
-pub struct StorageUtil;
+const DEFAULT_VOLUME: f32 = 1_f32;
+const DEFAULT_SPEED: f32 = 1_f32;
+
+pub struct StorageUtil {
+    music_search_path: Option<PathBuf>,
+    track_order: TrackOrder,
+    current_playlist: DefaultPlaylist<DefaultTrack>,
+    current_playback_pos: u64,
+    looping_state: LoopingState,
+    volume: f32,
+    speed: f32,
+}
 
 impl StorageUtil {
+    #[inline]
+    pub async fn new() -> Self {
+        Self {
+            music_search_path: Self::init_music_search_path().await,
+            track_order: Self::init_track_order().await,
+            current_playlist: DefaultPlaylist::default(),
+            current_playback_pos: Self::init_current_playback_position().await,
+            looping_state: Self::init_looping_state().await,
+            volume: Self::init_volume().await,
+            speed: Self::init_speed().await,
+        }
+    }
+
+    #[inline]
+    pub async fn initialize_playlist(&mut self, jvm: AJVM) {
+        self.current_playlist = Self::init_current_playlist(jvm).await;
+    }
+
     #[inline]
     async fn load_or_create_read_only_file() -> Result<File> {
         Ok(match File::open("data.yaml").await {
@@ -60,7 +89,7 @@ impl StorageUtil {
     }
 
     #[inline]
-    pub async fn write_data_to_file(all_data: Hash) -> Result<()> {
+    async fn write_data_to_file(all_data: Hash) -> Result<()> {
         let mut data = String::new();
 
         YamlEmitter::new(&mut data)
@@ -72,7 +101,9 @@ impl StorageUtil {
     }
 
     #[inline]
-    pub async fn store_music_search_path(music_search_path: PathBuf) -> Result<()> {
+    pub async fn store_music_search_path(&mut self, music_search_path: PathBuf) -> Result<()> {
+        self.music_search_path = Some(music_search_path.clone());
+
         let mut all_data = Self::read_all_data_from_file().await?;
 
         all_data.insert(
@@ -84,73 +115,60 @@ impl StorageUtil {
     }
 
     #[inline]
-    async fn set_default_music_search_path() -> Option<PathBuf> {
-        let default_music_search_path = audio_dir()?;
-
-        Self::store_music_search_path(default_music_search_path.clone())
-            .await
-            .ok()?;
-
-        return Some(default_music_search_path);
-    }
-
-    #[inline]
-    pub async fn load_music_search_path() -> Option<PathBuf> {
+    async fn init_music_search_path() -> Option<PathBuf> {
         let all_data = match Self::read_all_data_from_file().await {
             Ok(x) => x,
-            Err(_) => return Self::set_default_music_search_path().await,
+            Err(_) => return audio_dir(),
         };
 
-        Some(
-            match all_data.get(&Yaml::String("music_search_path".to_string())) {
-                None => return Self::set_default_music_search_path().await,
-                Some(y) => PathBuf::from(y.as_str().unwrap().to_string()),
-            },
-        )
+        match all_data.get(&Yaml::String("music_search_path".to_string())) {
+            None => audio_dir(),
+            Some(y) => Some(PathBuf::from(y.as_str().unwrap().to_string())),
+        }
     }
 
     #[inline]
-    pub async fn store_track_order(track_order: TrackOrder) -> Result<()> {
+    pub fn load_music_search_path(&self) -> Option<&PathBuf> {
+        self.music_search_path.as_ref()
+    }
+
+    #[inline]
+    pub async fn store_track_order(&mut self, track_order: TrackOrder) -> Result<()> {
+        self.track_order = track_order;
         let mut all_data = Self::read_all_data_from_file().await?;
         all_data.insert(Yaml::String("track_order".to_string()), track_order.into());
         Self::write_data_to_file(all_data).await
     }
 
     #[inline]
-    async fn set_default_track_order() -> Option<TrackOrder> {
-        let default_track_order = TrackOrder::default();
-        Self::store_track_order(default_track_order).await.ok()?;
-        return Some(default_track_order);
-    }
-
-    #[inline]
-    pub async fn load_track_order() -> TrackOrder {
+    async fn init_track_order() -> TrackOrder {
         let all_data = match Self::read_all_data_from_file().await {
             Ok(x) => x,
-            Err(_) => {
-                return Self::set_default_track_order()
-                    .await
-                    .unwrap_or(TrackOrder::default())
-            }
+            Err(_) => return TrackOrder::default(),
         };
 
         match all_data.get(&Yaml::String("track_order".to_string())) {
-            None => Self::set_default_track_order()
-                .await
-                .unwrap_or(TrackOrder::default()),
+            None => TrackOrder::default(),
 
             Some(y) => match y.as_hash() {
-                None => Self::set_default_track_order()
-                    .await
-                    .unwrap_or(TrackOrder::default()),
-
+                None => TrackOrder::default(),
                 Some(hash) => hash.into(),
             },
         }
     }
 
     #[inline]
-    pub async fn store_current_playlist(cur_playlist: DefaultPlaylist<DefaultTrack>) -> Result<()> {
+    pub fn load_track_order(&self) -> TrackOrder {
+        self.track_order
+    }
+
+    #[inline]
+    pub async fn store_current_playlist(
+        &mut self,
+        cur_playlist: DefaultPlaylist<DefaultTrack>,
+    ) -> Result<()> {
+        self.current_playlist = cur_playlist.clone();
+
         let mut all_data = Self::read_all_data_from_file().await?;
 
         all_data.insert(
@@ -162,46 +180,34 @@ impl StorageUtil {
     }
 
     #[inline]
-    async fn set_default_current_playlist() -> Option<DefaultPlaylist<DefaultTrack>> {
-        let default_current_playlist = DefaultPlaylist::default();
-
-        Self::store_current_playlist(default_current_playlist.clone())
-            .await
-            .ok()?;
-
-        return Some(default_current_playlist);
-    }
-
-    #[inline]
-    pub async fn load_current_playlist(jvm: AJVM) -> DefaultPlaylist<DefaultTrack> {
+    async fn init_current_playlist(jvm: AJVM) -> DefaultPlaylist<DefaultTrack> {
         let all_data = match Self::read_all_data_from_file().await {
             Ok(x) => x,
-            Err(_) => {
-                return Self::set_default_current_playlist()
-                    .await
-                    .unwrap_or(DefaultPlaylist::default())
-            }
+            Err(_) => return DefaultPlaylist::default(),
         };
 
         match all_data.get(&Yaml::String("current_playlist".to_string())) {
-            None => Self::set_default_current_playlist()
-                .await
-                .unwrap_or(DefaultPlaylist::default()),
+            None => DefaultPlaylist::default(),
 
             Some(y) => match y.as_hash() {
-                None => Self::set_default_current_playlist()
-                    .await
-                    .unwrap_or(DefaultPlaylist::default()),
+                None => DefaultPlaylist::default(),
 
                 Some(playlist) => DefaultPlaylist::from_yaml(jvm, playlist)
                     .await
-                    .unwrap_or(DefaultPlaylist::default()),
+                    .unwrap_or_default(),
             },
         }
     }
 
     #[inline]
-    pub async fn store_current_playback_position(millis: u64) -> Result<()> {
+    pub fn load_current_playlist(&self) -> &DefaultPlaylist<DefaultTrack> {
+        &self.current_playlist
+    }
+
+    #[inline]
+    pub async fn store_current_playback_position(&mut self, millis: u64) -> Result<()> {
+        self.current_playback_pos = millis;
+
         let mut all_data = Self::read_all_data_from_file().await?;
 
         all_data.insert(
@@ -213,47 +219,27 @@ impl StorageUtil {
     }
 
     #[inline]
-    async fn set_default_current_playback_position() -> Option<u64> {
-        let default_current_playback_position = 0;
-
-        Self::store_current_playback_position(default_current_playback_position)
-            .await
-            .ok()?;
-
-        return Some(default_current_playback_position);
-    }
-
-    #[inline]
-    pub async fn load_current_playback_position() -> u64 {
+    async fn init_current_playback_position() -> u64 {
         let all_data = match Self::read_all_data_from_file().await {
             Ok(x) => x,
-            Err(_) => {
-                println!("POS 1");
-                return Self::set_default_current_playback_position()
-                    .await
-                    .unwrap_or_default();
-            }
+            Err(_) => return 0,
         };
 
         match all_data.get(&Yaml::String("current_playback_position".to_string())) {
-            None => {
-                println!("POS 2");
-                Self::set_default_current_playback_position()
-                    .await
-                    .unwrap_or_default()
-            }
-
-            Some(y) => y.as_i64().unwrap_or({
-                println!("POS 3");
-                Self::set_default_current_playback_position()
-                    .await
-                    .unwrap_or_default() as i64
-            }) as u64,
+            None => 0,
+            Some(y) => y.as_i64().unwrap_or_default() as u64,
         }
     }
 
     #[inline]
-    pub async fn store_looping_state(looping_state: LoopingState) -> Result<()> {
+    pub fn load_current_playback_position(&self) -> u64 {
+        self.current_playback_pos
+    }
+
+    #[inline]
+    pub async fn store_looping_state(&mut self, looping_state: LoopingState) -> Result<()> {
+        self.looping_state = looping_state;
+
         let mut all_data = Self::read_all_data_from_file().await?;
 
         all_data.insert(
@@ -265,41 +251,27 @@ impl StorageUtil {
     }
 
     #[inline]
-    async fn set_default_looping_state() -> Option<LoopingState> {
-        let default_looping_state = LoopingState::default();
-
-        Self::store_looping_state(default_looping_state)
-            .await
-            .ok()?;
-
-        return Some(default_looping_state);
-    }
-
-    #[inline]
-    pub async fn load_looping_state() -> LoopingState {
+    async fn init_looping_state() -> LoopingState {
         let all_data = match Self::read_all_data_from_file().await {
             Ok(x) => x,
-            Err(_) => {
-                println!("LOOPING 1");
-                return Self::set_default_looping_state().await.unwrap_or_default();
-            }
+            Err(_) => return LoopingState::default(),
         };
 
         match all_data.get(&Yaml::String("looping_state".to_string())) {
-            None => {
-                println!("LOOPING 2");
-                Self::set_default_looping_state().await.unwrap_or_default()
-            }
-
-            Some(y) => y.as_i64().map(LoopingState::from).unwrap_or({
-                println!("LOOPING 3");
-                Self::set_default_looping_state().await.unwrap_or_default()
-            }),
+            None => LoopingState::default(),
+            Some(y) => y.as_i64().map(LoopingState::from).unwrap_or_default(),
         }
     }
 
     #[inline]
-    pub async fn store_volume(volume: f32) -> Result<()> {
+    pub fn load_looping_state(&self) -> LoopingState {
+        self.looping_state
+    }
+
+    #[inline]
+    pub async fn store_volume(&mut self, volume: f32) -> Result<()> {
+        self.volume = volume;
+
         let mut all_data = Self::read_all_data_from_file().await?;
 
         all_data.insert(
@@ -311,37 +283,31 @@ impl StorageUtil {
     }
 
     #[inline]
-    async fn set_default_volume() -> Option<f32> {
-        let default_volume = 1_f32;
-        Self::store_volume(default_volume).await.ok()?;
-        return Some(default_volume);
-    }
-
-    #[inline]
-    pub async fn load_volume() -> f32 {
+    async fn init_volume() -> f32 {
         let all_data = match Self::read_all_data_from_file().await {
             Ok(x) => x,
-            Err(_) => {
-                println!("VOLUME 1");
-                return Self::set_default_volume().await.unwrap_or(1_f32);
-            }
+            Err(_) => return DEFAULT_VOLUME,
         };
 
         match all_data.get(&Yaml::String("volume".to_string())) {
-            None => {
-                println!("VOLUME 2");
-                Self::set_default_volume().await.unwrap_or(1_f32)
-            }
+            None => DEFAULT_VOLUME,
 
-            Some(y) => y.as_f64().map(|double| double as f32).unwrap_or({
-                println!("VOLUME 3");
-                Self::set_default_volume().await.unwrap_or(1_f32)
-            }),
+            Some(y) => y
+                .as_f64()
+                .map(|double| double as f32)
+                .unwrap_or(DEFAULT_VOLUME),
         }
     }
 
     #[inline]
-    pub async fn store_speed(speed: f32) -> Result<()> {
+    pub fn load_volume(&self) -> f32 {
+        self.volume
+    }
+
+    #[inline]
+    pub async fn store_speed(&mut self, speed: f32) -> Result<()> {
+        self.speed = speed;
+
         let mut all_data = Self::read_all_data_from_file().await?;
 
         all_data.insert(
@@ -353,32 +319,24 @@ impl StorageUtil {
     }
 
     #[inline]
-    async fn set_default_speed() -> Option<f32> {
-        let default_speed = 1_f32;
-        Self::store_speed(default_speed).await.ok()?;
-        return Some(default_speed);
-    }
-
-    #[inline]
-    pub async fn load_speed() -> f32 {
+    async fn init_speed() -> f32 {
         let all_data = match Self::read_all_data_from_file().await {
             Ok(x) => x,
-            Err(_) => {
-                println!("SPEED 1");
-                return Self::set_default_speed().await.unwrap_or(1_f32);
-            }
+            Err(_) => return DEFAULT_SPEED,
         };
 
         match all_data.get(&Yaml::String("speed".to_string())) {
-            None => {
-                println!("SPEED 2");
-                Self::set_default_speed().await.unwrap_or(1_f32)
-            }
+            None => DEFAULT_SPEED,
 
-            Some(y) => y.as_f64().map(|double| double as f32).unwrap_or({
-                println!("SPEED 3");
-                Self::set_default_speed().await.unwrap_or(1_f32)
-            }),
+            Some(y) => y
+                .as_f64()
+                .map(|double| double as f32)
+                .unwrap_or(DEFAULT_SPEED),
         }
+    }
+
+    #[inline]
+    pub fn load_speed(&self) -> f32 {
+        self.speed
     }
 }

@@ -196,6 +196,7 @@ private fun PlayPauseButton(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val currentTrack by selectedTrackState.collectAsState()
+    val isPlaying by isPlayingState.collectAsState()
 
     val lang by storageHandler.languageState.collectAsState()
     val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
@@ -211,7 +212,7 @@ private fun PlayPauseButton(
                 RustLibs.onPlayButtonClickedBlocking()
 
                 when {
-                    isPlayingState.value -> startPlaybackControlTasks(
+                    isPlaying -> startPlaybackControlTasks(
                         selectedTrackState = selectedTrackState,
                         isPlayingState = isPlayingState,
                         isPlayingCoverLoadedState = isPlayingCoverLoadedState,
@@ -227,17 +228,21 @@ private fun PlayPauseButton(
             }
         }
     ) {
-        Image(
-            painter = painterResource(
-                when {
-                    isPlayingState.value -> "images/pause.png"
-                    else -> "images/play.png"
-                }
-            ),
-            contentDescription = lang.trackCover,
-            colorFilter = ColorFilter.tint(secondaryAlternativeColor),
-            contentScale = ContentScale.Inside,
-        )
+        when {
+            isPlaying -> Image(
+                painter = painterResource("images/pause.png"),
+                contentDescription = lang.trackCover,
+                colorFilter = ColorFilter.tint(secondaryAlternativeColor),
+                contentScale = ContentScale.Inside,
+            )
+
+            else -> Image(
+                painter = painterResource("images/play.png"),
+                contentDescription = lang.trackCover,
+                colorFilter = ColorFilter.tint(secondaryAlternativeColor),
+                contentScale = ContentScale.Inside,
+            )
+        }
     }
 }
 

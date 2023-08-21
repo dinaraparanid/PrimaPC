@@ -20,13 +20,10 @@ import com.paranid5.prima.domain.cancelPlaybackControlTasks
 import com.paranid5.prima.domain.extensions.correctUTF8String
 import com.paranid5.prima.domain.startPlaybackControlTasks
 import com.paranid5.prima.rust.RustLibs
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.update
 import org.jaudiotagger.audio.AudioFileIO
-import org.jetbrains.skia.Image
 import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
 import java.io.File
@@ -56,13 +53,13 @@ fun TrackItem(
     val track by remember { derivedStateOf { tracksOnScreen[index] } }
     val isPopupMenuExpandedState = remember { mutableStateOf(false) }
 
-    val textColor by remember {
-        derivedStateOf {
+    var textColor by remember {
+        mutableStateOf(
             when (track) {
                 selectedTrackState.value -> primaryColor
                 else -> secondaryAlternativeColor
             }
-        }
+        )
     }
 
     LaunchedEffect(Unit) {
@@ -74,11 +71,20 @@ fun TrackItem(
                 ?.binaryData
                 ?: return@withContext null
 
-            Image.makeFromEncoded(coverBytes).toComposeImageBitmap()
+            org.jetbrains.skia.Image.makeFromEncoded(coverBytes).toComposeImageBitmap()
         }
 
-        cover?.let { coverState.value = it }
-        isCoverLoadedState.value = true
+        cover?.let {
+            coverState.value = it
+            isCoverLoadedState.value = true
+        }
+    }
+
+    LaunchedEffect(selectedTrackState.value) {
+        textColor = when (track) {
+            selectedTrackState.value -> primaryColor
+            else -> secondaryAlternativeColor
+        }
     }
 
     Card(
@@ -332,34 +338,34 @@ private fun onTrackClicked(
     coroutineScope: CoroutineScope
 ) {
     when (selectedTrackState.value) {
-        clickedTrack -> isPlayingState.value = !isPlayingState.value
+        clickedTrack -> isPlayingState.update { !it }
 
         else -> {
-            selectedTrackState.value = clickedTrack
-            isPlayingState.value = true
-            playbackPositionState.value = 0F
-            isPlayingCoverLoadedState.value = false
+            selectedTrackState.update { clickedTrack }
+            isPlayingState.update { true }
+            playbackPositionState.update { 0F }
+            isPlayingCoverLoadedState.update { false }
         }
     }
 
-    coroutineScope.launch(Dispatchers.IO) {
-        RustLibs.onTrackClickedBlocking(tracksOnScreen, index)
+    coroutineScope.launch(Dispatchers.IO) { RustLibs.onTrackClickedBlocking(tracksOnScreen, index) }
 
-        when {
-            isPlayingState.value -> coroutineScope.launch {
-                startPlaybackControlTasks(
-                    selectedTrackState = selectedTrackState,
-                    isPlayingState = isPlayingState,
-                    isPlayingCoverLoadedState = isPlayingCoverLoadedState,
-                    playbackPositionState = playbackPositionState,
-                    loopingState = loopingState,
-                    currentPlaylistTracksState = currentPlaylistTracksState,
-                    isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
-                    speedState = speedState
-                )
-            }
+    when {
+        isPlayingState.value -> coroutineScope.launch {
+            delay(1000)
 
-            else -> cancelPlaybackControlTasks()
+            startPlaybackControlTasks(
+                selectedTrackState = selectedTrackState,
+                isPlayingState = isPlayingState,
+                isPlayingCoverLoadedState = isPlayingCoverLoadedState,
+                playbackPositionState = playbackPositionState,
+                loopingState = loopingState,
+                currentPlaylistTracksState = currentPlaylistTracksState,
+                isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
+                speedState = speedState
+            )
         }
+
+        else -> cancelPlaybackControlTasks()
     }
 }

@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,11 +40,10 @@ fun CurrentTrackData(modifier: Modifier = Modifier) =
 
         TrackCover(
             modifier = Modifier
-                .align(Alignment.CenterVertically)
                 .size(100.dp)
-                .clip(CircleShape),
+                .clip(CircleShape)
+                .align(Alignment.CenterVertically),
             imageModifier = Modifier
-                .align(Alignment.CenterVertically)
                 .padding(24.dp)
                 .clip(CircleShape)
         )
@@ -85,8 +85,8 @@ private fun TrackCover(
             org.jetbrains.skia.Image.makeFromEncoded(data).toComposeImageBitmap()
         }
 
-        isPlayingCoverLoadedState.update { true }
         cover = cov ?: return@LaunchedEffect
+        isPlayingCoverLoadedState.update { true }
     }
 
     Card(
@@ -96,19 +96,27 @@ private fun TrackCover(
         elevation = 15.dp,
         modifier = modifier
     ) {
-        when {
-            isPlayingCoverLoaded -> Image(
-                bitmap = cover,
-                contentDescription = lang.trackCover,
-                filterQuality = FilterQuality.High,
-                modifier = imageModifier
-            )
+        Box(Modifier.fillMaxSize()) {
+            when {
+                isPlayingCoverLoaded -> Image(
+                    bitmap = cover,
+                    contentDescription = lang.trackCover,
+                    contentScale = ContentScale.Crop,
+                    filterQuality = FilterQuality.High,
+                    modifier = imageModifier
+                        .size(100.dp)
+                        .align(Alignment.Center)
+                )
 
-            else -> Image(
-                painter = painterResource("images/default_cover.png"),
-                contentDescription = lang.trackCover,
-                modifier = imageModifier
-            )
+                else -> Image(
+                    painter = painterResource("images/default_cover.png"),
+                    contentDescription = lang.trackCover,
+                    contentScale = ContentScale.Crop,
+                    modifier = imageModifier
+                        .matchParentSize()
+                        .align(Alignment.Center)
+                )
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ package com.paranid5.prima.presentation.screens.main_menu_fragments.favourites.a
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.paranid5.prima.data.Artist
 import com.paranid5.prima.di.KOIN_FAVOURITE_ARTISTS
@@ -25,7 +26,7 @@ fun FavouriteArtistsScreen(
     artistsState: MutableStateFlow<List<Artist>> = koinInject(named(KOIN_FAVOURITE_ARTISTS)),
     filteredArtistsState: MutableStateFlow<List<Artist>> = koinInject(named(KOIN_FILTERED_FAVOURITE_ARTISTS)),
 ) {
-    val isLoadingState = mutableStateOf(true)
+    val isLoadingState = remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         val artists = withContext(Dispatchers.IO) {

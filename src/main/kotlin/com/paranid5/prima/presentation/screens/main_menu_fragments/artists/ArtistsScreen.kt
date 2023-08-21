@@ -23,7 +23,7 @@ fun ArtistsScreen(
     filteredArtistsState: MutableStateFlow<List<Artist>> = koinInject(named(KOIN_FILTERED_ALL_ARTISTS)),
 ) {
     val lang by storageHandler.languageState.collectAsState()
-    val isLoadingState = mutableStateOf(true)
+    val isLoadingState = remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         scanArtists(

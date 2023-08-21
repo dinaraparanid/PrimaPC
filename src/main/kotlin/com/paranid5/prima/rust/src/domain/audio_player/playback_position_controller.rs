@@ -1,7 +1,7 @@
 extern crate futures;
 extern crate tokio;
 
-use crate::StorageUtil;
+use crate::ARWLStorage;
 use futures::future::AbortHandle;
 use std::{sync::Arc, time::Duration};
 use tokio::sync::RwLock;
@@ -14,10 +14,10 @@ pub struct PlaybackPositionController {
 
 impl PlaybackPositionController {
     #[inline]
-    pub async fn default() -> Self {
+    pub async fn default(storage_util: ARWLStorage) -> Self {
         Self {
             position: Arc::new(RwLock::new(Duration::from_millis(
-                StorageUtil::load_current_playback_position().await,
+                storage_util.read().await.load_current_playback_position(),
             ))),
             task: None,
         }

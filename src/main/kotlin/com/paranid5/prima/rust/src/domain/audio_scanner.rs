@@ -4,7 +4,7 @@ extern crate once_cell;
 extern crate tokio;
 
 use crate::{
-    data::utils::types::AMutex, Comparator, DefaultTrack, Ord, StorageUtil, TokioRuntime,
+    data::utils::types::AMutex, ARWLStorage, Comparator, DefaultTrack, Ord, TokioRuntime,
     TrackOrder, TrackTrait,
 };
 
@@ -30,10 +30,12 @@ impl AudioScanner {
     pub async fn get_all_tracks(
         jvm: Arc<JavaVM>,
         tokio_runtime: TokioRuntime,
+        storage_util: ARWLStorage,
     ) -> AMutex<Vec<DefaultTrack>> {
         let tracks = Arc::new(Mutex::new(Vec::new()));
+        let storage_util = storage_util.read().await;
 
-        let music_search_path = match StorageUtil::load_music_search_path().await {
+        let music_search_path = match storage_util.load_music_search_path() {
             None => return tracks,
             Some(msp) => msp,
         };
@@ -44,7 +46,7 @@ impl AudioScanner {
 
         {
             let mut tracks = tracks.lock().await;
-            let track_order = StorageUtil::load_track_order().await;
+            let track_order = storage_util.load_track_order();
 
             tracks.sort_by(|f, s| match track_order.comparator {
                 Comparator::Title => Self::compare_by_title(track_order, f, s),
@@ -168,7 +170,7 @@ impl AudioScanner {
             let trc = tokio_runtime.clone();
 
             tasks.push(
-                tokio_runtime.spawn(async move { Self::search_step(path, tracks, jvm, trc) }),
+                tokio_runtime.spawn(async move { Self::search_step(path, tracks, jvm, trc).await }),
             );
         }
 

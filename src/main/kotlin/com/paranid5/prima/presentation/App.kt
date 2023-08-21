@@ -28,7 +28,7 @@ fun App() {
                 exitApplication()
             },
         ) {
-            MainScreen(window)
+            MainScreen()
         }
     }
 }

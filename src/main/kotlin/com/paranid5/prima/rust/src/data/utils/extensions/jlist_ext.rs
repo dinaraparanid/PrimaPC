@@ -23,7 +23,10 @@ impl<'a, 'b, 'c> JListExt for JList<'a, 'b, 'c> {
         let mut iter = self.iter(&mut *env.borrow_mut()).unwrap();
         let mut vec = Vec::new();
 
-        while let Some(obj) = { iter.next(&mut *env.borrow_mut()).unwrap() } {
+        while let Some(obj) = {
+            let obj = iter.next(&mut *env.borrow_mut()).unwrap();
+            obj
+        } {
             vec.push(transformer(obj, env.clone()))
         }
 

@@ -18,7 +18,7 @@ fun TracksScreen(
     allTracksState: MutableStateFlow<List<Track>> = koinInject(named(KOIN_ALL_TRACKS)),
     filteredAllTracksState: MutableStateFlow<List<Track>> = koinInject(named(KOIN_FILTERED_ALL_TRACKS))
 ) {
-    val isLoadingState = mutableStateOf(true)
+    val isLoadingState = remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         scanTracks(

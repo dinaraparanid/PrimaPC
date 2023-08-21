@@ -9,6 +9,7 @@ use atomic_float::AtomicF32;
 use futures::future::{AbortHandle, Abortable};
 use futures_timer::Delay;
 use rodio::{source::Buffered, Decoder, OutputStream, OutputStreamHandle, Sink, Source};
+use tokio::{sync::RwLock, task::JoinHandle};
 
 use std::{
     fs::File,
@@ -21,14 +22,12 @@ use std::{
     time::Duration,
 };
 
-use tokio::{sync::RwLock, task::JoinHandle};
-
 use crate::{
     data::utils::types::*,
     domain::audio_player::{
         playback_params::*, playback_position_controller::PlaybackPositionController, result::*,
     },
-    PlaylistTrait, StorageUtil, TrackTrait,
+    PlaylistTrait, TrackTrait,
 };
 
 pub struct AudioPlayer {
@@ -40,18 +39,16 @@ pub struct AudioPlayer {
     playback_position_controller: ARWLock<PlaybackPositionController>,
 }
 
-pub type ARWLPlayer = ARWLock<AudioPlayer>;
-
 impl AudioPlayer {
     #[inline]
-    pub async fn new(playback_params: PlaybackParams) -> Self {
+    pub async fn new(playback_params: PlaybackParams, storage_util: ARWLStorage) -> Self {
         AudioPlayer {
             source_path: None,
             playback_data: None,
             is_playing: Arc::new(AtomicBool::default()),
             playback_params,
             playback_position_controller: Arc::new(RwLock::new(
-                PlaybackPositionController::default().await,
+                PlaybackPositionController::default(storage_util).await,
             )),
             total_duration: Duration::default(),
         }
@@ -63,6 +60,7 @@ impl AudioPlayer {
         playback_position_controller: ARWLock<PlaybackPositionController>,
         speed: Arc<AtomicF32>,
         max_duration: Duration,
+        storage_util: ARWLStorage,
     ) {
         let (handle, reg) = AbortHandle::new_pair();
         let is_playing_clone = is_playing.clone();
@@ -83,7 +81,15 @@ impl AudioPlayer {
                             break;
                         }
 
+                        println!("Rust player position: {:?}", cur_dur);
                         *position_clone.write().await = cur_dur;
+
+                        storage_util
+                            .write()
+                            .await
+                            .store_current_playback_position(cur_dur.as_millis() as u64)
+                            .await
+                            .unwrap_or_default();
                     }
                 }
             },
@@ -97,12 +103,14 @@ impl AudioPlayer {
     #[inline]
     async fn get_buffered_source(
         this: ARWLPlayer,
-        jvm: AJVM,
+        storage_util: ARWLStorage,
     ) -> Result<Buffered<Decoder<BufReader<File>>>> {
         if this.read().await.source_path.is_none() {
             this.write().await.source_path = Some(
-                StorageUtil::load_current_playlist(jvm)
+                storage_util
+                    .read()
                     .await
+                    .load_current_playlist()
                     .get_cur_track()
                     .unwrap()
                     .get_path()
@@ -124,18 +132,20 @@ impl AudioPlayer {
     }
 
     #[inline]
-    async fn run_playback_preparation_tasks(
+    fn run_playback_preparation_tasks(
         is_playing: Arc<AtomicBool>,
         playback_position_controller: ARWLock<PlaybackPositionController>,
         speed: Arc<AtomicF32>,
         max_duration: Duration,
         tokio_runtime: TokioRuntime,
+        storage_util: ARWLStorage,
     ) {
         tokio_runtime.spawn(AudioPlayer::run_playback_control_task(
             is_playing,
             playback_position_controller,
             speed,
             max_duration,
+            storage_util,
         ));
     }
 
@@ -156,15 +166,20 @@ impl AudioPlayer {
     async fn play_with_result(
         this: ARWLPlayer,
         tokio_runtime: TokioRuntime,
-        jvm: AJVM,
+        storage_util: ARWLStorage,
         source: PathBuf,
         track_duration: Duration,
     ) -> Result<()> {
         Self::abort_playback_position_controller_tasks(this.clone()).await;
         Self::reset_on_play(this.clone(), source, track_duration).await;
-        Self::save_cur_playback_pos_async(this.clone(), tokio_runtime.clone()).await;
+        Self::save_cur_playback_pos_async(
+            this.clone(),
+            tokio_runtime.clone(),
+            storage_util.clone(),
+        )
+        .await;
 
-        let source = Self::get_buffered_source(this.clone(), jvm).await?;
+        let source = Self::get_buffered_source(this.clone(), storage_util.clone()).await?;
 
         let src = Source::buffered(Source::fade_in(
             Source::reverb(
@@ -183,7 +198,7 @@ impl AudioPlayer {
             this.read().await.playback_params.get_fade_in(),
         ));
 
-        let (_, handle) = OutputStream::try_default().unwrap();
+        let (_stream, handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&handle).unwrap();
         this.write().await.playback_data = Some((handle, sink));
 
@@ -199,14 +214,22 @@ impl AudioPlayer {
 
         this.read().await.is_playing.store(true, Ordering::SeqCst);
 
-        Ok(Self::run_playback_preparation_tasks(
+        Self::run_playback_preparation_tasks(
             this.read().await.is_playing.clone(),
             this.read().await.playback_position_controller.clone(),
             this.read().await.get_speed_ref(),
             this.read().await.total_duration,
             tokio_runtime,
-        )
-        .await)
+            storage_util,
+        );
+
+        {
+            let this = this.read().await;
+            let refer = &this.playback_data.as_ref().unwrap().1;
+            refer.sleep_until_end();
+        }
+
+        Ok(())
     }
 
     #[inline]
@@ -229,11 +252,11 @@ impl AudioPlayer {
     pub async fn play(
         this: ARWLPlayer,
         tokio_runtime: TokioRuntime,
-        jvm: AJVM,
+        storage_util: ARWLStorage,
         source: PathBuf,
         track_duration: Duration,
     ) {
-        AudioPlayer::play_with_result(this, tokio_runtime, jvm, source, track_duration)
+        AudioPlayer::play_with_result(this, tokio_runtime, storage_util, source, track_duration)
             .await
             .unwrap_or_default()
     }
@@ -242,18 +265,22 @@ impl AudioPlayer {
     pub async fn save_cur_playback_pos_async(
         this: ARWLPlayer,
         tokio_runtime: TokioRuntime,
+        storage_util: ARWLStorage,
     ) -> JoinHandle<()> {
         let pos = this.read().await.get_cur_playback_pos().await.as_millis() as u64;
 
         tokio_runtime.spawn(async move {
-            StorageUtil::store_current_playback_position(pos)
+            storage_util
+                .write()
+                .await
+                .store_current_playback_position(pos)
                 .await
                 .unwrap_or_default()
         })
     }
 
     #[inline]
-    pub async fn pause(this: ARWLPlayer, tokio_runtime: TokioRuntime) {
+    pub async fn pause(this: ARWLPlayer, tokio_runtime: TokioRuntime, storage_util: ARWLStorage) {
         {
             let this_ref = this.read().await;
             this_ref.is_playing.store(false, Ordering::SeqCst);
@@ -265,34 +292,41 @@ impl AudioPlayer {
             this_ref.playback_data.as_ref().unwrap().1.stop();
         }
 
-        Self::save_cur_playback_pos_async(this, tokio_runtime).await;
+        Self::save_cur_playback_pos_async(this, tokio_runtime, storage_util).await;
     }
 
     #[inline]
     async fn resume_with_result(
         this: ARWLPlayer,
         tokio_runtime: TokioRuntime,
-        jvm: AJVM,
+        storage_util: ARWLStorage,
         track_duration: Duration,
     ) -> Result<()> {
         let cur_duration = this.read().await.get_cur_playback_pos().await;
-        Self::seek_to_with_result(this, tokio_runtime, jvm, cur_duration, track_duration).await
+        Self::seek_to_with_result(
+            this,
+            tokio_runtime,
+            storage_util,
+            cur_duration,
+            track_duration,
+        )
+        .await
     }
 
     #[inline]
     pub async fn resume(
         this: ARWLPlayer,
         tokio_runtime: TokioRuntime,
-        jvm: AJVM,
+        storage_util: ARWLStorage,
         track_duration: Duration,
     ) {
-        Self::resume_with_result(this, tokio_runtime, jvm, track_duration)
+        Self::resume_with_result(this, tokio_runtime, storage_util, track_duration)
             .await
             .unwrap_or_default()
     }
 
     #[inline]
-    pub async fn stop(this: ARWLPlayer, tokio_runtime: TokioRuntime) {
+    pub async fn stop(this: ARWLPlayer, tokio_runtime: TokioRuntime, storage_util: ARWLStorage) {
         {
             let this_ref = this.read().await;
             this_ref.is_playing.store(false, Ordering::SeqCst);
@@ -308,18 +342,18 @@ impl AudioPlayer {
                 .unwrap_or_default();
         }
 
-        Self::save_cur_playback_pos_async(this, tokio_runtime).await;
+        Self::save_cur_playback_pos_async(this, tokio_runtime, storage_util).await;
     }
 
     #[inline]
     async fn seek_to_with_result(
         this: ARWLPlayer,
         tokio_runtime: TokioRuntime,
-        jvm: AJVM,
+        storage_util: ARWLStorage,
         position: Duration,
         track_duration: Duration,
     ) -> Result<()> {
-        let src = Self::get_buffered_source(this.clone(), jvm).await?;
+        let src = Self::get_buffered_source(this.clone(), storage_util.clone()).await?;
 
         let src = Source::buffered(Source::skip_duration(
             Source::fade_in(
@@ -341,9 +375,9 @@ impl AudioPlayer {
             position,
         ));
 
-        Self::stop(this.clone(), tokio_runtime.clone()).await;
+        Self::stop(this.clone(), tokio_runtime.clone(), storage_util.clone()).await;
 
-        let (_, handle) = OutputStream::try_default().unwrap();
+        let (_stream, handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&handle).unwrap();
 
         this.write().await.playback_data = Some((handle, sink));
@@ -379,24 +413,32 @@ impl AudioPlayer {
             this.read().await.get_speed_ref(),
             this.read().await.total_duration,
             tokio_runtime.clone(),
-        )
-        .await;
+            storage_util.clone(),
+        );
 
-        Ok(Self::save_cur_playback_pos_async(this, tokio_runtime)
+        Self::save_cur_playback_pos_async(this.clone(), tokio_runtime, storage_util)
             .await
             .await
-            .unwrap_or_default())
+            .unwrap_or_default();
+
+        {
+            let this = this.read().await;
+            let refer = &this.playback_data.as_ref().unwrap().1;
+            refer.sleep_until_end();
+        }
+
+        Ok(())
     }
 
     #[inline]
     pub async fn seek_to(
         this: ARWLPlayer,
         tokio_runtime: TokioRuntime,
-        jvm: AJVM,
+        storage_util: ARWLStorage,
         position: Duration,
         track_duration: Duration,
     ) {
-        Self::seek_to_with_result(this, tokio_runtime, jvm, position, track_duration)
+        Self::seek_to_with_result(this, tokio_runtime, storage_util, position, track_duration)
             .await
             .unwrap_or_default()
     }
@@ -455,7 +497,7 @@ impl AudioPlayer {
     pub async fn set_reverb(
         this: ARWLPlayer,
         tokio_runtime: TokioRuntime,
-        jvm: AJVM,
+        storage_util: ARWLStorage,
         reverb: ReverbParams,
     ) -> Result<()> {
         this.write().await.playback_params.set_reverb(reverb);
@@ -471,7 +513,7 @@ impl AudioPlayer {
             .read()
             .await;
 
-        let src = Self::get_buffered_source(this.clone(), jvm).await?;
+        let src = Self::get_buffered_source(this.clone(), storage_util.clone()).await?;
 
         let src = Source::buffered(Source::skip_duration(
             Source::reverb(src, reverb.get_duration(), reverb.get_amplitude()),
@@ -494,15 +536,15 @@ impl AudioPlayer {
             this.read().await.get_speed_ref(),
             this.read().await.total_duration,
             tokio_runtime,
-        )
-        .await)
+            storage_util,
+        ))
     }
 
     #[inline]
     pub async fn set_fade_in(
         this: ARWLPlayer,
         tokio_runtime: TokioRuntime,
-        jvm: AJVM,
+        storage_util: ARWLStorage,
         fade_in: Duration,
     ) -> Result<()> {
         this.write().await.playback_params.set_fade_in(fade_in);
@@ -520,7 +562,7 @@ impl AudioPlayer {
 
         let src = Source::buffered(Source::skip_duration(
             Source::fade_in(
-                AudioPlayer::get_buffered_source(this.clone(), jvm).await?,
+                AudioPlayer::get_buffered_source(this.clone(), storage_util.clone()).await?,
                 fade_in,
             ),
             pos,
@@ -542,8 +584,8 @@ impl AudioPlayer {
             this.read().await.get_speed_ref(),
             this.read().await.total_duration,
             tokio_runtime,
-        )
-        .await)
+            storage_util,
+        ))
     }
 
     #[inline]

@@ -239,7 +239,6 @@ fn get_path_and_duration_of_playlist_track(
 async fn get_path_and_duration_of_cur_track() -> (PathBuf, Duration) {
     let storage_util = STORAGE_UTIL.read().await;
     let playlist = storage_util.load_current_playlist();
-    println!("Loaded playlist {:?}", playlist);
     get_path_and_duration_of_playlist_track(playlist)
 }
 
@@ -287,10 +286,11 @@ async fn is_prev_track_equals_cur_track(cur_track: &DefaultTrack) -> bool {
 #[inline]
 async fn play_pause_cur_track(playlist: Option<DefaultPlaylist<DefaultTrack>>) {
     let cur_track = playlist.as_ref().map(|p| p.get_cur_track()).flatten();
-
     let is_playing = AUDIO_PLAYER.read().await.is_playing();
 
     if is_playing {
+        println!("Prepare to stop");
+
         AudioPlayer::stop(
             AUDIO_PLAYER.clone(),
             TOKIO_RUNTIME.clone(),
@@ -363,8 +363,6 @@ async fn resume() {
 
 #[inline]
 async fn store_and_play_playlist(playlist: DefaultPlaylist<DefaultTrack>) {
-    println!("New playlist: {:?}", playlist);
-
     let (path, track_duration) = get_path_and_duration_of_playlist_track(&playlist);
     set_cur_playlist(playlist).await;
 
@@ -424,10 +422,7 @@ pub unsafe extern "system" fn Java_com_paranid5_prima_rust_RustLibs_onNextTrackC
         let mut playlist = { STORAGE_UTIL.read().await.load_current_playlist().clone() };
         let cur_track = playlist.get_cur_track();
 
-        println!("On next called 1");
-
         if cur_track.is_some() {
-            println!("On next called 2");
             playlist.skip_to_next();
             play_pause_cur_track(Some(playlist)).await
         }

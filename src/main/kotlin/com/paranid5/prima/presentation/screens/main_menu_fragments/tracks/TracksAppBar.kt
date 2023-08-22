@@ -44,14 +44,14 @@ fun TracksAppBar(
             onTextChanged = { q ->
                 val query = q.lowercase()
 
-                fun contains(ord: TrackSearchOrder, track: Track) =
-                    ord in trackSearchOrder && track.title?.lowercase()?.contains(query) == true
+                fun contains(ord: TrackSearchOrder, trackTag: String?) =
+                    ord in trackSearchOrder && trackTag?.lowercase()?.contains(query) == true
 
                 filteredAllTracksState.update {
                     tracks.filter { track ->
-                        if (contains(TrackSearchOrder.TITLE, track)) return@filter true
-                        if (contains(TrackSearchOrder.ARTIST, track)) return@filter true
-                        contains(TrackSearchOrder.ALBUM, track)
+                        if (contains(TrackSearchOrder.TITLE, track.title)) return@filter true
+                        if (contains(TrackSearchOrder.ARTIST, track.artist)) return@filter true
+                        contains(TrackSearchOrder.ALBUM, track.album)
                     }
                 }
             },

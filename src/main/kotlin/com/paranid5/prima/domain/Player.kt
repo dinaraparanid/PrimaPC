@@ -21,14 +21,21 @@ suspend fun startPlaybackControlTasks(
 ): Unit = coroutineScope {
     playbackControlTasksState.update {
         launch(Dispatchers.Default) {
+            while (!RustLibs.isPlaying())
+                delay(50)
+
+            val duration = selectedTrackState.value?.duration ?: 0
+
             runCalculationOfSliderPos(
                 isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
                 playbackPositionState = playbackPositionState,
             )
 
-            val dif = RustLibs.getPlaybackPositionBlocking() - (selectedTrackState.value?.duration ?: 0)
+            val dif = duration - RustLibs.getPlaybackPositionBlocking()
 
-            if (dif <= 50)
+            if (dif <= 50) {
+                println("On completion")
+
                 onPlaybackCompletion(
                     selectedTrackState = selectedTrackState,
                     isPlayingState = isPlayingState,
@@ -39,6 +46,7 @@ suspend fun startPlaybackControlTasks(
                     isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
                     speedState = speedState
                 )
+            }
         }
     }
 }
@@ -54,9 +62,6 @@ private suspend inline fun runCalculationOfSliderPos(
     isPlaybackTrackDraggingState: StateFlow<Boolean>,
     playbackPositionState: MutableStateFlow<Float>,
 ) {
-    while (!RustLibs.isPlaying())
-        delay(100)
-
     while (RustLibs.isPlaying() && !isPlaybackTrackDraggingState.value) {
         val duration = RustLibs.getPlaybackPositionBlocking().toFloat()
         playbackPositionState.update { duration }

@@ -24,7 +24,7 @@ const val KOIN_SELECTED_TRACK = "selected_track"
 
 const val KOIN_ALL_ARTISTS = "all_artists"
 const val KOIN_FILTERED_ALL_ARTISTS = "filtered_all_artists"
-const val KOIN_SELECTED_ARTIST = "selected_track"
+const val KOIN_SELECTED_ARTIST = "selected_artist"
 
 const val KOIN_ARTIST_TRACKS = "artist_tracks"
 const val KOIN_FILTERED_ARTIST_TRACKS = "filtered_artist_tracks"

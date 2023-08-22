@@ -17,15 +17,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.paranid5.prima.data.Track
 import com.paranid5.prima.di.*
-import com.paranid5.prima.domain.StorageHandler
-import com.paranid5.prima.domain.cancelPlaybackControlTasks
-import com.paranid5.prima.domain.startPlaybackControlTasks
-import com.paranid5.prima.domain.switchToNextTrack
+import com.paranid5.prima.domain.*
 import com.paranid5.prima.presentation.ui.navigation.composition_locals.LocalRootNavigator
 import com.paranid5.prima.rust.RustLibs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
@@ -92,6 +91,7 @@ private fun LikeButton(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val currentTrack by selectedTrackState.collectAsState()
+    val isLiked by isLikedState.collectAsState()
 
     val lang by storageHandler.languageState.collectAsState()
     val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
@@ -111,17 +111,18 @@ private fun LikeButton(
             }
         }
     ) {
-        Image(
-            painter = painterResource(
-                when {
-                    isLikedState.value -> "images/heart_like.png"
-                    else -> "images/heart.png"
-                }
-            ),
+        @Composable
+        fun LikeImage(resource: String) = Image(
+            painter = painterResource(resource),
             contentDescription = lang.trackCover,
             colorFilter = ColorFilter.tint(secondaryAlternativeColor),
-            contentScale = ContentScale.Inside,
+            contentScale = ContentScale.Inside
         )
+
+        when {
+            isLiked -> LikeImage("images/heart_like.png")
+            else -> LikeImage("images/heart.png")
+        }
     }
 }
 
@@ -151,15 +152,8 @@ private fun PrevTrackButton(
         contentPadding = PaddingValues(horizontal = 20.dp),
         modifier = modifier,
         onClick = {
-            if (currentTrack != null) coroutineScope.launch(Dispatchers.IO) {
-                RustLibs.onPreviousTrackClickedBlocking()
-
-                selectedTrackState.update { RustLibs.getCurTrackBlocking() }
-                isPlayingState.update { true }
-                isPlayingCoverLoadedState.update { false }
-                playbackPositionState.update { 0F }
-
-                startPlaybackControlTasks(
+            if (currentTrack != null) coroutineScope.launch {
+                switchToPrevTrack(
                     selectedTrackState = selectedTrackState,
                     isPlayingState = isPlayingState,
                     isPlayingCoverLoadedState = isPlayingCoverLoadedState,
@@ -207,41 +201,43 @@ private fun PlayPauseButton(
         contentPadding = PaddingValues(),
         modifier = modifier,
         onClick = {
-            if (currentTrack != null) coroutineScope.launch(Dispatchers.IO) {
-                isPlayingState.update { !it }
-                RustLibs.onPlayButtonClickedBlocking()
+            if (currentTrack != null) {
+                coroutineScope.launch(Dispatchers.IO) {
+                    RustLibs.onPlayButtonClickedBlocking()
+                }
+
+                val playing = isPlayingState.updateAndGet { !it }
 
                 when {
-                    isPlaying -> startPlaybackControlTasks(
-                        selectedTrackState = selectedTrackState,
-                        isPlayingState = isPlayingState,
-                        isPlayingCoverLoadedState = isPlayingCoverLoadedState,
-                        playbackPositionState = playbackPositionState,
-                        loopingState = loopingState,
-                        currentPlaylistTracksState = currentPlaylistTracksState,
-                        isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
-                        speedState = speedState
-                    )
+                    playing -> coroutineScope.launch {
+                        startPlaybackControlTasks(
+                            selectedTrackState = selectedTrackState,
+                            isPlayingState = isPlayingState,
+                            isPlayingCoverLoadedState = isPlayingCoverLoadedState,
+                            playbackPositionState = playbackPositionState,
+                            loopingState = loopingState,
+                            currentPlaylistTracksState = currentPlaylistTracksState,
+                            isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
+                            speedState = speedState
+                        )
+                    }
 
                     else -> cancelPlaybackControlTasks()
                 }
             }
         }
     ) {
-        when {
-            isPlaying -> Image(
-                painter = painterResource("images/pause.png"),
-                contentDescription = lang.trackCover,
-                colorFilter = ColorFilter.tint(secondaryAlternativeColor),
-                contentScale = ContentScale.Inside,
-            )
+        @Composable
+        fun PlayingImage(resource: String) = Image(
+            painter = painterResource(resource),
+            contentDescription = lang.trackCover,
+            colorFilter = ColorFilter.tint(secondaryAlternativeColor),
+            contentScale = ContentScale.Inside,
+        )
 
-            else -> Image(
-                painter = painterResource("images/play.png"),
-                contentDescription = lang.trackCover,
-                colorFilter = ColorFilter.tint(secondaryAlternativeColor),
-                contentScale = ContentScale.Inside,
-            )
+        when {
+            isPlaying -> PlayingImage("images/pause.png")
+            else -> PlayingImage("images/play.png")
         }
     }
 }
@@ -271,19 +267,18 @@ private fun NextTrackButton(
         contentPadding = PaddingValues(horizontal = 20.dp),
         modifier = modifier,
         onClick = {
-            if (currentTrack != null)
-                coroutineScope.launch(Dispatchers.IO) {
-                    switchToNextTrack(
-                        selectedTrackState = selectedTrackState,
-                        isPlayingState = isPlayingState,
-                        isPlayingCoverLoadedState = isPlayingCoverLoadedState,
-                        playbackPositionState = playbackPositionState,
-                        loopingState = loopingState,
-                        currentPlaylistTracksState = currentPlaylistTracksState,
-                        isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
-                        speedState = speedState
-                    )
-                }
+            if (currentTrack != null) coroutineScope.launch {
+                switchToNextTrack(
+                    selectedTrackState = selectedTrackState,
+                    isPlayingState = isPlayingState,
+                    isPlayingCoverLoadedState = isPlayingCoverLoadedState,
+                    playbackPositionState = playbackPositionState,
+                    loopingState = loopingState,
+                    currentPlaylistTracksState = currentPlaylistTracksState,
+                    isPlaybackTrackDraggingState = isPlaybackTrackDraggingState,
+                    speedState = speedState
+                )
+            }
         }
     ) {
         Image(
@@ -314,22 +309,23 @@ private fun LoopingButton(
         modifier = modifier,
         onClick = {
             coroutineScope.launch(Dispatchers.IO) {
-                loopingState.value = RustLibs.setNextLoopingStateBlocking()
+                loopingState.update { RustLibs.setNextLoopingStateBlocking() }
             }
         }
     ) {
-        Image(
-            painter = painterResource(
-                when (looping) {
-                    0 -> "images/repeat.png"
-                    1 -> "images/repeat_1.png"
-                    else -> "images/no_repeat.png"
-                }
-            ),
+        @Composable
+        fun RepeatImage(resource: String) = Image(
+            painter = painterResource(resource),
             contentDescription = lang.trackCover,
             colorFilter = ColorFilter.tint(secondaryAlternativeColor),
             contentScale = ContentScale.Inside,
         )
+
+        when (looping) {
+            0 -> RepeatImage("images/repeat.png")
+            1 -> RepeatImage("images/repeat_1.png")
+            2 -> RepeatImage("images/no_repeat.png")
+        }
     }
 }
 

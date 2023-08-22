@@ -75,11 +75,11 @@ private fun PlaybackTrackSlider(
             cancelPlaybackControlTasks()
         },
         onValueChangeFinished = {
-            isPlayingState.update { true }
             isPlaybackTrackDraggingState.update { false }
+            isPlayingState.update { true }
 
             coroutineScope.launch(Dispatchers.IO) {
-                RustLibs.seekToBlocking(playbackPos.toLong())
+                RustLibs.seekToBlocking(playbackPositionState.value.toLong())
             }
 
             coroutineScope.launch {

@@ -43,12 +43,16 @@ impl DBEntity for FavouriteTrackDBEntity {
     }
 }
 
-impl From<FavouriteTrackDBEntity> for FavouriteTrack {
+impl FavouriteTrack {
     #[inline]
-    fn from(entity: FavouriteTrackDBEntity) -> Self {
+    fn from(entity: FavouriteTrackDBEntity) -> Option<Self> {
         let path = PathBuf::from(entity.path);
 
-        Self::new(
+        if !path.exists() {
+            return None;
+        }
+
+        Some(Self::new(
             entity.title,
             entity.artist,
             entity.album,
@@ -56,7 +60,7 @@ impl From<FavouriteTrackDBEntity> for FavouriteTrack {
             Duration::milliseconds(entity.duration),
             DateTime::from(std::fs::metadata(path).unwrap().created().unwrap()),
             entity.number_in_album as jshort,
-        )
+        ))
     }
 }
 
@@ -104,12 +108,18 @@ impl EntityDao<PathBuf, FavouriteTrack> for FavouriteTrackDao {
     #[inline]
     fn get_all(conn: &mut SqliteConnection) -> Vec<FavouriteTrack> {
         let entities: Vec<FavouriteTrackDBEntity> = FavouriteTrackDao::get_all(conn);
-        entities.into_iter().map(FavouriteTrack::from).collect()
+
+        entities
+            .into_iter()
+            .filter_map(FavouriteTrack::from)
+            .collect()
     }
 
     #[inline]
     fn get_by_key(key: PathBuf, conn: &mut SqliteConnection) -> Option<FavouriteTrack> {
-        FavouriteTrackDao::get_by_key(key.to_string(), conn).map(FavouriteTrack::from)
+        FavouriteTrackDao::get_by_key(key.to_string(), conn)
+            .map(FavouriteTrack::from)
+            .flatten()
     }
 
     #[inline]

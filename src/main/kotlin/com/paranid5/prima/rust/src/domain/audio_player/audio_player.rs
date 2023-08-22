@@ -32,7 +32,7 @@ use crate::{
 
 pub struct AudioPlayer {
     source_path: Option<PathBuf>,
-    playback_data: Option<(OutputStreamHandle, Sink)>,
+    playback_data: Option<(Arc<OutputStreamHandle>, Arc<Sink>)>,
     total_duration: Duration,
     is_playing: Arc<AtomicBool>,
     playback_params: PlaybackParams,
@@ -81,7 +81,6 @@ impl AudioPlayer {
                             break;
                         }
 
-                        println!("Rust player position: {:?}", cur_dur);
                         *position_clone.write().await = cur_dur;
 
                         storage_util
@@ -200,13 +199,14 @@ impl AudioPlayer {
 
         let (_stream, handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&handle).unwrap();
-        this.write().await.playback_data = Some((handle, sink));
+        this.write().await.playback_data = Some((Arc::new(handle), Arc::new(sink)));
 
         {
-            let speed = this.read().await.playback_params.get_speed();
-            let volume = this.read().await.playback_params.get_volume();
-            let mut refer = this.write().await;
-            let refer = &mut refer.playback_data.as_mut().unwrap().1;
+            let this = this.read().await;
+            let speed = this.playback_params.get_speed();
+            let volume = this.playback_params.get_volume();
+            let refer = this.playback_data.as_ref().unwrap().1.clone();
+
             refer.append(src);
             refer.set_speed(speed);
             refer.set_volume(volume);
@@ -223,13 +223,12 @@ impl AudioPlayer {
             storage_util,
         );
 
-        {
+        let refer = {
             let this = this.read().await;
-            let refer = &this.playback_data.as_ref().unwrap().1;
-            refer.sleep_until_end();
-        }
+            this.playback_data.as_ref().unwrap().1.clone()
+        };
 
-        Ok(())
+        Ok(refer.sleep_until_end())
     }
 
     #[inline]
@@ -380,14 +379,14 @@ impl AudioPlayer {
         let (_stream, handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&handle).unwrap();
 
-        this.write().await.playback_data = Some((handle, sink));
+        this.write().await.playback_data = Some((Arc::new(handle), Arc::new(sink)));
         this.write().await.total_duration = track_duration;
 
         {
             let this = this.read().await;
             let speed = this.playback_params.get_speed();
             let volume = this.playback_params.get_volume();
-            let refer = &this.playback_data.as_ref().unwrap().1;
+            let refer = this.playback_data.as_ref().unwrap().1.clone();
 
             refer.append(src);
             refer.set_speed(speed);
@@ -421,13 +420,12 @@ impl AudioPlayer {
             .await
             .unwrap_or_default();
 
-        {
+        let refer = {
             let this = this.read().await;
-            let refer = &this.playback_data.as_ref().unwrap().1;
-            refer.sleep_until_end();
-        }
+            this.playback_data.as_ref().unwrap().1.clone()
+        };
 
-        Ok(())
+        Ok(refer.sleep_until_end())
     }
 
     #[inline]

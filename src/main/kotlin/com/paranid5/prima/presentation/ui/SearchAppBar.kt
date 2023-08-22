@@ -28,6 +28,7 @@ fun <T> SearchAppBar(
     onTextChanged: suspend (String) -> Unit,
 ) {
     val textState = remember { mutableStateOf("") }
+    val secondaryColor by storageHandler.secondaryColorState.collectAsState()
     val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
 
     LaunchedEffect(textState.value) {
@@ -36,7 +37,8 @@ fun <T> SearchAppBar(
 
     TopAppBar(
         modifier = modifier.fillMaxWidth().height(60.dp),
-        elevation = 10.dp
+        elevation = 10.dp,
+        backgroundColor = secondaryColor
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth().fillMaxHeight(),

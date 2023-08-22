@@ -20,10 +20,12 @@ fun PlayingBar(
     storageHandler: StorageHandler = koinInject(),
 ) {
     val primaryColor by storageHandler.primaryColorState.collectAsState()
+    val secondaryColor by storageHandler.secondaryColorState.collectAsState()
 
     BottomAppBar(
         modifier = modifier.fillMaxWidth().height(150.dp),
-        elevation = 10.dp
+        elevation = 10.dp,
+        backgroundColor = secondaryColor
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),

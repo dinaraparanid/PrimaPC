@@ -57,10 +57,12 @@ private fun DefaultAppBar(
     storageHandler: StorageHandler = koinInject()
 ) {
     val primaryColor by storageHandler.primaryColorState.collectAsState()
+    val secondaryColor by storageHandler.secondaryColorState.collectAsState()
 
     TopAppBar(
         modifier = modifier.fillMaxWidth().height(60.dp),
-        elevation = 10.dp
+        elevation = 10.dp,
+        backgroundColor = secondaryColor
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth().fillMaxHeight(),

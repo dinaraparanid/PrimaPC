@@ -85,12 +85,6 @@ static AUDIO_PLAYER: Lazy<ARWLPlayer> = Lazy::new(|| {
     })
 });
 
-#[inline]
-fn atomic_audio_player() -> ARWLPlayer {
-    println!("Get atomic audio player");
-    AUDIO_PLAYER.clone()
-}
-
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_initRust(env: JNIEnv, _class: JClass) {
@@ -102,7 +96,7 @@ pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_initRust(env: JNIEn
     TOKIO_RUNTIME
         .block_on(async move { STORAGE_UTIL.write().await.initialize_playlist(jvm).await });
 
-    let _ = atomic_audio_player();
+    let _ = AUDIO_PLAYER.clone();
 
     let mut db_connection = establish_connection().unwrap();
 
@@ -294,12 +288,11 @@ async fn is_prev_track_equals_cur_track(cur_track: &DefaultTrack) -> bool {
 async fn play_pause_cur_track(playlist: Option<DefaultPlaylist<DefaultTrack>>) {
     let cur_track = playlist.as_ref().map(|p| p.get_cur_track()).flatten();
 
-    let audio_player = atomic_audio_player();
-    let is_playing = atomic_audio_player().read().await.is_playing();
+    let is_playing = AUDIO_PLAYER.read().await.is_playing();
 
     if is_playing {
         AudioPlayer::stop(
-            audio_player.clone(),
+            AUDIO_PLAYER.clone(),
             TOKIO_RUNTIME.clone(),
             STORAGE_UTIL.clone(),
         )
@@ -317,7 +310,7 @@ async fn play_pause_cur_track(playlist: Option<DefaultPlaylist<DefaultTrack>>) {
             pause().await;
         } else {
             println!("Prepare to play 1");
-            store_and_play_playlist(playlist).await;
+            store_and_play_playlist(playlist.unwrap()).await;
         }
 
         return;
@@ -325,7 +318,7 @@ async fn play_pause_cur_track(playlist: Option<DefaultPlaylist<DefaultTrack>>) {
 
     if !has_cur_track().await {
         println!("Prepare to play 2");
-        store_and_play_playlist(playlist).await;
+        store_and_play_playlist(playlist.unwrap()).await;
         return;
     }
 
@@ -341,14 +334,14 @@ async fn play_pause_cur_track(playlist: Option<DefaultPlaylist<DefaultTrack>>) {
         resume().await
     } else {
         println!("Prepare to play 3");
-        store_and_play_playlist(playlist).await
+        store_and_play_playlist(playlist.unwrap()).await
     }
 }
 
 #[inline]
 async fn pause() {
     AudioPlayer::pause(
-        atomic_audio_player(),
+        AUDIO_PLAYER.clone(),
         TOKIO_RUNTIME.clone(),
         STORAGE_UTIL.clone(),
     )
@@ -360,7 +353,7 @@ async fn resume() {
     let (_, track_duration) = get_path_and_duration_of_cur_track().await;
 
     AudioPlayer::resume(
-        atomic_audio_player(),
+        AUDIO_PLAYER.clone(),
         TOKIO_RUNTIME.clone(),
         STORAGE_UTIL.clone(),
         track_duration,
@@ -369,15 +362,14 @@ async fn resume() {
 }
 
 #[inline]
-async fn store_and_play_playlist(playlist: Option<DefaultPlaylist<DefaultTrack>>) {
+async fn store_and_play_playlist(playlist: DefaultPlaylist<DefaultTrack>) {
     println!("New playlist: {:?}", playlist);
 
-    let playlist = playlist.unwrap();
     let (path, track_duration) = get_path_and_duration_of_playlist_track(&playlist);
     set_cur_playlist(playlist).await;
 
     AudioPlayer::play(
-        atomic_audio_player(),
+        AUDIO_PLAYER.clone(),
         TOKIO_RUNTIME.clone(),
         STORAGE_UTIL.clone(),
         path,
@@ -416,9 +408,7 @@ pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_onPlayButtonClicked
     _class: JClass,
 ) {
     TOKIO_RUNTIME.block_on(async move {
-        println!("Prepare to play/pause native");
         if has_cur_track().await {
-            println!("Play/pause native");
             play_pause_cur_track(None).await
         }
     })
@@ -431,35 +421,15 @@ pub unsafe extern "system" fn Java_com_paranid5_prima_rust_RustLibs_onNextTrackC
     _class: JClass,
 ) {
     TOKIO_RUNTIME.block_on(async move {
-        let mut playlist = STORAGE_UTIL.read().await.load_current_playlist().clone();
-
+        let mut playlist = { STORAGE_UTIL.read().await.load_current_playlist().clone() };
         let cur_track = playlist.get_cur_track();
 
+        println!("On next called 1");
+
         if cur_track.is_some() {
+            println!("On next called 2");
             playlist.skip_to_next();
-
-            STORAGE_UTIL
-                .write()
-                .await
-                .store_current_playlist(playlist.clone())
-                .await
-                .unwrap_or_default();
-
-            let cur_track = playlist.get_cur_track().unwrap();
-
-            let (path, duration) = (
-                cur_track.get_path().clone(),
-                cur_track.get_duration().to_std().unwrap(),
-            );
-
-            AudioPlayer::play(
-                atomic_audio_player(),
-                TOKIO_RUNTIME.clone(),
-                STORAGE_UTIL.clone(),
-                path,
-                duration,
-            )
-            .await
+            play_pause_cur_track(Some(playlist)).await
         }
     })
 }
@@ -476,29 +446,7 @@ pub unsafe extern "system" fn Java_com_paranid5_prima_rust_RustLibs_onPreviousTr
 
         if cur_track.is_some() {
             playlist.skip_to_prev();
-
-            STORAGE_UTIL
-                .write()
-                .await
-                .store_current_playlist(playlist.clone())
-                .await
-                .unwrap_or_default();
-
-            let cur_track = playlist.get_cur_track().unwrap();
-
-            let (path, duration) = (
-                cur_track.get_path().clone(),
-                cur_track.get_duration().to_std().unwrap(),
-            );
-
-            AudioPlayer::play(
-                atomic_audio_player(),
-                TOKIO_RUNTIME.clone(),
-                STORAGE_UTIL.clone(),
-                path,
-                duration,
-            )
-            .await
+            play_pause_cur_track(Some(playlist)).await
         }
     })
 }
@@ -536,13 +484,26 @@ pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_seekToBlocking(
     millis: jlong,
 ) {
     TOKIO_RUNTIME.block_on(async move {
-        let storage_util = STORAGE_UTIL.read().await;
-        let playlist = storage_util.load_current_playlist();
-        let cur_track = playlist.get_cur_track();
+        let cur_track = {
+            let storage_util = STORAGE_UTIL.read().await;
+            let playlist = storage_util.load_current_playlist();
+            playlist.get_cur_track().map(|track| track.clone())
+        };
+
+        let is_playing = AUDIO_PLAYER.read().await.is_playing();
+
+        if is_playing {
+            AudioPlayer::stop(
+                AUDIO_PLAYER.clone(),
+                TOKIO_RUNTIME.clone(),
+                STORAGE_UTIL.clone(),
+            )
+            .await;
+        }
 
         if let Some(cur_track) = cur_track {
             AudioPlayer::seek_to(
-                atomic_audio_player(),
+                AUDIO_PLAYER.clone(),
                 TOKIO_RUNTIME.clone(),
                 STORAGE_UTIL.clone(),
                 Duration::from_millis(millis as u64),
@@ -559,9 +520,7 @@ pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_isPlaying(
     _env: JNIEnv,
     _class: JClass,
 ) -> jboolean {
-    jboolean::from(
-        TOKIO_RUNTIME.block_on(async { atomic_audio_player().read().await.is_playing() }),
-    )
+    jboolean::from(TOKIO_RUNTIME.block_on(async { AUDIO_PLAYER.read().await.is_playing() }))
 }
 
 #[no_mangle]
@@ -574,7 +533,7 @@ pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_replayCurTrackBlock
         let (path, duration) = get_path_and_duration_of_cur_track().await;
 
         AudioPlayer::play(
-            atomic_audio_player(),
+            AUDIO_PLAYER.clone(),
             TOKIO_RUNTIME.clone(),
             STORAGE_UTIL.clone(),
             path,
@@ -591,9 +550,8 @@ pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_setNextLoopingState
     _class: JClass,
 ) -> jint {
     TOKIO_RUNTIME.block_on(async {
-        let audio_player = atomic_audio_player();
-        AudioPlayer::set_next_looping_state(audio_player.clone()).await;
-        let state = audio_player.read().await.get_looping_state();
+        AudioPlayer::set_next_looping_state(AUDIO_PLAYER.clone()).await;
+        let state = AUDIO_PLAYER.read().await.get_looping_state();
 
         STORAGE_UTIL
             .write()
@@ -621,7 +579,7 @@ pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_setVolumeBlocking(
             .await
             .unwrap_or_default();
 
-        AudioPlayer::set_volume(atomic_audio_player(), volume as f32).await
+        AudioPlayer::set_volume(AUDIO_PLAYER.clone(), volume as f32).await
     })
 }
 
@@ -640,7 +598,7 @@ pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_setSpeedBlocking(
             .await
             .unwrap_or_default();
 
-        AudioPlayer::set_speed(atomic_audio_player(), speed as f32).await
+        AudioPlayer::set_speed(AUDIO_PLAYER.clone(), speed as f32).await
     })
 }
 
@@ -650,7 +608,7 @@ pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getVolumeBlocking(
     _env: JNIEnv,
     _class: JClass,
 ) -> jfloat {
-    TOKIO_RUNTIME.block_on(async { atomic_audio_player().write().await.get_volume() as jfloat })
+    TOKIO_RUNTIME.block_on(async { AUDIO_PLAYER.write().await.get_volume() as jfloat })
 }
 
 #[no_mangle]
@@ -659,7 +617,7 @@ pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getSpeedBlocking(
     _env: JNIEnv,
     _class: JClass,
 ) -> jfloat {
-    TOKIO_RUNTIME.block_on(async { atomic_audio_player().write().await.get_speed() as jfloat })
+    TOKIO_RUNTIME.block_on(async { AUDIO_PLAYER.write().await.get_speed() as jfloat })
 }
 
 #[no_mangle]
@@ -668,13 +626,7 @@ pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_getLoopingStateBloc
     _env: JNIEnv,
     _class: JClass,
 ) -> jint {
-    TOKIO_RUNTIME.block_on(async {
-        atomic_audio_player()
-            .write()
-            .await
-            .get_looping_state()
-            .into()
-    })
+    TOKIO_RUNTIME.block_on(async { AUDIO_PLAYER.write().await.get_looping_state().into() })
 }
 
 #[no_mangle]
@@ -744,7 +696,7 @@ pub extern "system" fn Java_com_paranid5_prima_rust_RustLibs_storeCurPlaybackPos
 ) {
     TOKIO_RUNTIME.block_on(async {
         AudioPlayer::save_cur_playback_pos_async(
-            atomic_audio_player().clone(),
+            AUDIO_PLAYER.clone(),
             TOKIO_RUNTIME.clone(),
             STORAGE_UTIL.clone(),
         )

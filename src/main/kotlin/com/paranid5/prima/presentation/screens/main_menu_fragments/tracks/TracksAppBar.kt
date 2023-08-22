@@ -70,15 +70,15 @@ private fun DefaultAppBar(
     modifier: Modifier = Modifier,
     storageHandler: StorageHandler = koinInject(),
 ) {
-    val lang by storageHandler.languageState.collectAsState()
     val primaryColor by storageHandler.primaryColorState.collectAsState()
-    val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
+    val secondaryColor by storageHandler.secondaryColorState.collectAsState()
 
     val isPopupMenuExpandedState = remember { mutableStateOf(false) }
 
     TopAppBar(
         modifier = modifier.fillMaxWidth().height(60.dp),
-        elevation = 10.dp
+        elevation = 10.dp,
+        backgroundColor = secondaryColor
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth().fillMaxHeight(),

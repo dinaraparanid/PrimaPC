@@ -348,12 +348,12 @@ private fun onTrackClicked(
         }
     }
 
-    coroutineScope.launch(Dispatchers.IO) { RustLibs.onTrackClickedBlocking(tracksOnScreen, index) }
+    coroutineScope.launch(Dispatchers.IO) {
+        RustLibs.onTrackClickedBlocking(tracksOnScreen, index)
+    }
 
     when {
         isPlayingState.value -> coroutineScope.launch {
-            delay(1000)
-
             startPlaybackControlTasks(
                 selectedTrackState = selectedTrackState,
                 isPlayingState = isPlayingState,

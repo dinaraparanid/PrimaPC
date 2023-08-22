@@ -18,7 +18,9 @@ import com.paranid5.prima.di.KOIN_VOLUME
 import com.paranid5.prima.domain.StorageHandler
 import com.paranid5.prima.domain.extensions.precision
 import com.paranid5.prima.rust.RustLibs
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
 
@@ -38,6 +40,9 @@ private fun Volume(
     val secondaryColor by storageHandler.secondaryColorState.collectAsState()
     val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
 
+    val coroutineScope = rememberCoroutineScope()
+    val volume by volumeState.collectAsState()
+
     Row(modifier) {
         Image(
             painter = painterResource("images/volume_icon.png"),
@@ -48,7 +53,7 @@ private fun Volume(
         )
 
         Slider(
-            value = volumeState.value,
+            value = volume,
             valueRange = (0F..2F),
             colors = SliderDefaults.colors(
                 thumbColor = secondaryAlternativeColor,
@@ -57,13 +62,17 @@ private fun Volume(
             ),
             modifier = Modifier.width(150.dp),
             onValueChange = { volumeState.value = it },
-            onValueChangeFinished = { RustLibs.setVolumeBlocking(volumeState.value) }
+            onValueChangeFinished = {
+                coroutineScope.launch(Dispatchers.IO) {
+                    RustLibs.setVolumeBlocking(volumeState.value)
+                }
+            }
         )
 
         Spacer(Modifier.width(5.dp))
 
         Text(
-            text = volumeState.value.precision(4),
+            text = volume.precision(4),
             fontSize = 14.sp,
             color = secondaryAlternativeColor,
             modifier = Modifier.align(Alignment.CenterVertically)
@@ -81,6 +90,9 @@ private fun Speed(
     val secondaryColor by storageHandler.secondaryColorState.collectAsState()
     val secondaryAlternativeColor by storageHandler.secondaryAlternativeColorState.collectAsState()
 
+    val coroutineScope = rememberCoroutineScope()
+    val speed by speedState.collectAsState()
+
     Row(modifier) {
         Image(
             painter = painterResource("images/speed.png"),
@@ -91,7 +103,7 @@ private fun Speed(
         )
 
         Slider(
-            value = speedState.value,
+            value = speed,
             valueRange = (0.5F..2F),
             colors = SliderDefaults.colors(
                 thumbColor = secondaryAlternativeColor,
@@ -102,13 +114,17 @@ private fun Speed(
             onValueChange = {
                 speedState.value = it
             },
-            onValueChangeFinished = { RustLibs.setSpeedBlocking(speedState.value) }
+            onValueChangeFinished = {
+                coroutineScope.launch(Dispatchers.IO) {
+                    RustLibs.setSpeedBlocking(speedState.value)
+                }
+            }
         )
 
         Spacer(Modifier.width(5.dp))
 
         Text(
-            text = speedState.value.precision(4),
+            text = speed.precision(4),
             fontSize = 14.sp,
             color = secondaryAlternativeColor,
             modifier = Modifier.align(Alignment.CenterVertically)
